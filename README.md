@@ -13,6 +13,9 @@ AgroPeso/
 ├── requirements.txt
 ├── env/                       # entorno virtual (no se toca a mano)
 └── backend/
+    ├── tests/
+    │   ├── test_service.py
+    │   └── test_repository.py
     ├── config/
     │   ├── __init__.py
     │   └── database.py        # engine, SessionLocal, Base
@@ -63,6 +66,18 @@ Se implementó el patrón Repository en `backend/repository/ticket_repository.py
 - Las conversiones entre entidad y modelo (`_to_db` y `_to_entity`) están encapsuladas en el repositorio, por lo que las capas superiores nunca manejan objetos de SQLAlchemy.
 - Se corrigieron las relaciones de `Supplier` y `Product` para que apunten a `TicketDB` mediante el atributo `tickets`.
 
+### AGROPESO-004: Servicio de tickets (capa de negocio)
+
+Se implementó la capa de lógica de negocio en `backend/services/ticket_service.py`, que actúa como intermediaria entre los controladores de la API y el repositorio.
+
+- `TicketService` recibe un `TicketRepository` por inyección de dependencias y no conoce SQLAlchemy ni sesiones.
+- `registrar_pesada(ticket)`: valida la regla de negocio inicial (el peso bruto debe ser mayor a la tara) y, si se cumple, guarda el ticket mediante el repositorio. Si no se cumple, no se guarda nada.
+- `obtener_ticket(ticket_id)`: devuelve el ticket solicitado o lanza un error si no existe.
+- Se crearon excepciones propias en `backend/utils/exceptions.py`:
+  - `ReglaNegocioError`: se viola una regla del negocio (se traducirá a HTTP 400).
+  - `TicketNoEncontradoError`: no existe el ticket pedido (se traducirá a HTTP 404).
+- Se agregaron tests con `pytest` en `backend/tests/`, que prueban el servicio con un repositorio falso (sin necesidad de base de datos). Se ejecutan desde `backend/` con el comando `pytest`.
+
 ## Entorno de desarrollo (GitHub Codespaces)
 
 - El servidor de base de datos es MariaDB, instalado dentro del Codespace (`sudo apt install mariadb-server`).
@@ -70,3 +85,4 @@ Se implementó el patrón Repository en `backend/repository/ticket_repository.py
 - Base de datos: `AgroPeso`, con un usuario dedicado configurado en el `.env`.
 - Entorno virtual: `source env/bin/activate`. Dependencias en `requirements.txt`.
 - Los scripts se ejecutan desde la carpeta `backend/`.
+- Tests: `pytest` (ejecutar desde `backend/`; configuración en `pytest.ini`).
