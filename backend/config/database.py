@@ -27,6 +27,11 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 Base = declarative_base()
 
-
-
+#Entrega una sesión nueva por cada petición y la cierra al terminar, aunque haya habido un error.
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
