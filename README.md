@@ -3,34 +3,64 @@ Es una plataforma web para la gestión de tickets de pesadas de la bascula publi
 ---
 ## 📁 Estructura del Proyecto
 
-```text
+```
 AgroPeso/
-├── .env                       # credenciales (nuevo, lo creás vos)
+├── backend/
+│   ├── config/
+│   │   └── database.py          # Conexión a MySQL: engine, SessionLocal, Base y get_db
+│   ├── controllers/             # (reservada para futuros controladores)
+│   ├── middleware/              # (reservada: JWT, logs, manejo de errores)
+│   ├── models/                  # Capa de acceso a datos y dominio
+│   │   ├── __init__.py
+│   │   ├── products.py          # Modelo SQLAlchemy: Product
+│   │   ├── suppliers.py         # Modelo SQLAlchemy: Supplier
+│   │   └── ticket_model.py      # Entidad pura Ticket y modelo TicketDB
+│   ├── repository/              # Capa de acceso a datos (patrón Repository)
+│   │   ├── __init__.py
+│   │   └── ticket_repository.py
+│   ├── routers/                 # Capa de presentación: endpoints HTTP
+│   │   ├── __init__.py
+│   │   └── ticket_router.py
+│   ├── schemas/                 # Capa de presentación: esquemas de Pydantic
+│   │   ├── __init__.py
+│   │   └── ticket_schema.py
+│   ├── services/                # Capa de lógica de negocio
+│   │   ├── __init__.py
+│   │   └── ticket_service.py
+│   ├── tests/                   # Pruebas con pytest
+│   │   ├── test_repository.py
+│   │   ├── test_schemas.py
+│   │   └── test_server.py
+│   ├── utils/
+│   │   └── exceptions.py        # Excepciones propias (ReglaNegocioError, TicketNoEncontradoError)
+│   ├── create_table.py          # Script para crear las tablas en la base de datos
+│   ├── main.py                  # Punto de entrada: aplicación FastAPI
+│   └── pytest.ini               # Configuración de pytest
+├── frontend/
+│   ├── css/
+│   ├── html/
+│   └── js/
+├── env/                         # Entorno virtual de Python (no se versiona)
+├── .env                         # Credenciales de la base de datos (no se versiona)
 ├── .gitignore
-├── requirements.txt
-├── env/                       # entorno virtual (no se toca a mano)
-└── backend/
-    ├── tests/
-    │   ├── test_service.py
-    │   └── test_repository.py
-    ├── config/
-    │   ├── __init__.py
-    │   └── database.py        # engine, SessionLocal, Base
-    ├── models/
-    │   ├── __init__.py
-    │   ├── supplier.py        # class Supplier
-    │   ├── product.py         # class Product
-    │   └── pesada.py          # class Pesada
-    ├── repository/
-    │   └── pesada_repository.py
-    ├── services/
-    │   └── pesada_service.py
-    ├── controllers/           # reciben la petición y llaman al servicio
-    ├── routers/               # definen las rutas (/pesadas, etc.)
-    ├── middleware/            # JWT, logs
-    └── utils/                 # funciones auxiliares (hash de contraseñas, etc.)
+├── README.md
+└── requirements.txt             # Dependencias de Python
 ```
 
+### Responsabilidad de cada capa
+
+| Capa | Carpetas | Responsabilidad |
+|---|---|---|
+| Presentación | `routers/`, `schemas/` | Recibir peticiones HTTP, validar el formato del JSON y devolver respuestas con el código correcto |
+| Lógica de negocio | `services/`, entidad `Ticket` en `models/` | Aplicar las reglas del sistema, sin conocer HTTP ni la base de datos |
+| Acceso a datos | `repository/`, modelos SQLAlchemy en `models/`, `config/` | Guardar y leer en MySQL, convirtiendo entre entidades y modelos de base de datos |
+| Transversal | `utils/`, `middleware/` | Excepciones, logs y seguridad, usados por todas las capas |
+
+Las dependencias van siempre hacia abajo:
+
+```
+Router  →  Service  →  Repository  →  Base de datos
+```
 ---
 
 ## Las tres representaciones de un ticket
