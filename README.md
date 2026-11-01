@@ -3,6 +3,29 @@ Es una plataforma web para la gestión de tickets de pesadas de la bascula publi
 
 
 ---
+## Las tres representaciones de un ticket
+
+Cada capa de la arquitectura tiene su propia forma de ver un ticket, por eso no se reutiliza una sola clase para todo.
+
+| Clase | Capa | Para qué sirve |
+|---|---|---|
+|         `TicketDB`                | Acceso a datos | Guardarse en MySQL (modelo de SQLAlchemy) |
+|         `Ticket`                  |     Negocio    | Reglas y lógica (entidad pura, sin dependencias externas) |
+| `TicketCreate` / `TicketResponse` |  Presentación  | Lo que entra y sale por la API (esquemas de Pydantic) |
+
+Reglas de dependencia:
+
+- La entidad `Ticket` no importa nada de SQLAlchemy ni de Pydantic.
+- Los esquemas de Pydantic solo se usan en la capa de presentación (routers y controladores).
+- Los modelos de SQLAlchemy solo se usan dentro del repositorio.
+- La conversión entre una representación y otra la hace la capa que está en el límite: el repositorio convierte entre `Ticket` y `TicketDB`, y el router convierte entre los esquemas y `Ticket`.
+
+
+```
+Router (FastAPI)  →  TicketService  →  TicketRepository  →  MySQL
+(esquemas)           (reglas)           (guardar y leer)
+```
+---
 
 ## 📁 Estructura del Proyecto
 
