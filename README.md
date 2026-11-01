@@ -1,8 +1,38 @@
 # AgroPeso
 Es una plataforma web para la gestión de tickets de pesadas de la bascula publica. 
+---
+## 📁 Estructura del Proyecto
 
+```text
+AgroPeso/
+├── .env                       # credenciales (nuevo, lo creás vos)
+├── .gitignore
+├── requirements.txt
+├── env/                       # entorno virtual (no se toca a mano)
+└── backend/
+    ├── tests/
+    │   ├── test_service.py
+    │   └── test_repository.py
+    ├── config/
+    │   ├── __init__.py
+    │   └── database.py        # engine, SessionLocal, Base
+    ├── models/
+    │   ├── __init__.py
+    │   ├── supplier.py        # class Supplier
+    │   ├── product.py         # class Product
+    │   └── pesada.py          # class Pesada
+    ├── repository/
+    │   └── pesada_repository.py
+    ├── services/
+    │   └── pesada_service.py
+    ├── controllers/           # reciben la petición y llaman al servicio
+    ├── routers/               # definen las rutas (/pesadas, etc.)
+    ├── middleware/            # JWT, logs
+    └── utils/                 # funciones auxiliares (hash de contraseñas, etc.)
+```
 
 ---
+
 ## Las tres representaciones de un ticket
 
 Cada capa de la arquitectura tiene su propia forma de ver un ticket, por eso no se reutiliza una sola clase para todo.
@@ -24,6 +54,34 @@ Reglas de dependencia:
 ```
 Router (FastAPI)  →  TicketService  →  TicketRepository  →  MySQL
 (esquemas)           (reglas)           (guardar y leer)
+```
+
+#### Campos de `TicketCreate`
+
+| Campo | Tipo | Obligatorio | Regla |
+|---|---|---|---|
+| `chofer` | texto | Sí | No vacío, máximo 200 caracteres |
+| `patente` | texto | No | Máximo 11 caracteres |
+| `peso_tara` | entero | Sí | Mayor a 0 |
+| `peso_bruto` | entero | Sí | Mayor a 0 |
+| `supplier_id` | entero | Sí | Mayor a 0 |
+| `product_id` | entero | No | Mayor a 0 |
+| `transporte` | texto | No | Por defecto `"Equipo"`, máximo 50 caracteres |
+| `numero_ticket` | entero | No | Único en la base de datos |
+| `fecha` | fecha | No | Por defecto, la fecha de hoy |
+
+`TicketResponse` incluye los mismos campos, más `id` y `peso_neto` (calculado como `peso_bruto - peso_tara`).
+
+#### Ejemplo de solicitud
+
+```json
+{
+  "chofer": "Ivan Derio",
+  "patente": "HKN279",
+  "peso_tara": 15160,
+  "peso_bruto": 48260,
+  "supplier_id": 1
+}
 ```
 ---
 
@@ -100,6 +158,15 @@ Se implementó la capa de lógica de negocio en `backend/services/ticket_service
   - `ReglaNegocioError`: se viola una regla del negocio (se traducirá a HTTP 400).
   - `TicketNoEncontradoError`: no existe el ticket pedido (se traducirá a HTTP 404).
 - Se agregaron tests con `pytest` en `backend/tests/`, que prueban el servicio con un repositorio falso (sin necesidad de base de datos). Se ejecutan desde `backend/` con el comando `pytest`.
+
+### AGROPESO-005: Esquemas de la API (Pydantic)
+
+Se definió la forma exacta de los datos JSON que entran y salen de la API, en `backend/schemas/ticket_schema.py`.
+
+- `TicketCreate`: lo que el cliente envía para registrar una pesada. Valida el formato de los datos y rechaza campos desconocidos (por ejemplo, `id` o `peso_neto`, que el cliente no puede enviar).
+- `TicketResponse`: lo que la API devuelve. Incluye `id` y `peso_neto`, y se construye a partir de la entidad `Ticket` devuelta por el servicio.
+- Los esquemas pertenecen únicamente a la capa de presentación; ni la entidad ni el servicio los usan.
+- La regla de negocio "el peso bruto debe ser mayor a la tara" se mantiene en `TicketService`. Pydantic solo valida el formato.
 
 ## Entorno de desarrollo (GitHub Codespaces)
 
