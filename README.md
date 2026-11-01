@@ -84,6 +84,42 @@ Router (FastAPI)  →  TicketService  →  TicketRepository  →  MySQL
 }
 ```
 ---
+#### Endpoints
+
+| Método | Ruta | Descripción | Esquema de entrada | Respuesta |
+|---|---|---|---|---|
+| POST | `/tickets/` | Registra una pesada | `TicketCreate` | `TicketResponse` (201) |
+| GET | `/tickets/{ticket_id}` | Obtiene un ticket por id | — | `TicketResponse` (200) |
+
+#### Códigos de respuesta
+
+| Código | Cuándo ocurre |
+|---|---|
+| 200 / 201 | La operación se realizó correctamente |
+| 400 | Se viola una regla del negocio (por ejemplo, el peso bruto no es mayor a la tara) |
+| 404 | No existe el ticket solicitado |
+| 422 | El JSON no cumple el formato de los esquemas (tipos, valores negativos, campos desconocidos) |
+
+#### Cómo ejecutar la API
+
+Con el entorno virtual activo y el servicio de MariaDB iniciado (`sudo service mariadb start`), desde la carpeta `backend/`:
+
+```bash
+uvicorn main:app --reload
+```
+
+La documentación interactiva, donde se pueden probar los endpoints, está disponible en `/docs`.
+
+#### Flujo completo de una petición
+
+```
+HTTP  →  Router (esquemas)  →  TicketService (reglas)  →  TicketRepository  →  MySQL
+```
+
+#### Pendientes conocidos
+
+- Si el `supplier_id` no existe o el `numero_ticket` está repetido, MySQL rechaza la operación y la API responde 500. Falta traducirlo a un error controlado (por ejemplo, 409).
+---
 
 ## Historial de tickets
 
@@ -135,6 +171,16 @@ Se definió la forma exacta de los datos JSON que entran y salen de la API, en `
 - `TicketResponse`: lo que la API devuelve. Incluye `id` y `peso_neto`, y se construye a partir de la entidad `Ticket` devuelta por el servicio.
 - Los esquemas pertenecen únicamente a la capa de presentación; ni la entidad ni el servicio los usan.
 - La regla de negocio "el peso bruto debe ser mayor a la tara" se mantiene en `TicketService`. Pydantic solo valida el formato.
+
+### AGROPESO-006: Endpoints de FastAPI (capa de presentación)
+
+Se expusieron las funciones del servicio mediante peticiones HTTP, en `backend/routers/ticket_router.py`.
+
+- Se definió un `APIRouter` con el prefijo `/tickets`.
+- Cada endpoint recibe la sesión de base de datos con `Depends(get_db)`, instancia el `TicketRepository`, se lo pasa al `TicketService` y devuelve la respuesta con los esquemas de Pydantic.
+- `get_db` (en `config/database.py`) entrega una sesión por petición y la cierra al terminar.
+- `main.py` crea la aplicación FastAPI y registra el router.
+- Las excepciones del servicio se traducen a códigos HTTP en el router, porque conocer HTTP es responsabilidad de esta capa.
 
 ## Entorno de desarrollo (GitHub Codespaces)
 
