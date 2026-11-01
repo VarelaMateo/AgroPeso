@@ -19,6 +19,7 @@ class Ticket:  # Entidad pura
     product_id: Optional[int] = None
     transporte: str = "Equipo"
     numero_ticket: Optional[int] = None
+    id: Optional[int] = None
 
     @property
     def peso_neto(self) -> int:

@@ -13,4 +13,4 @@ class Supplier(Base):
     phone = Column(String(20), nullable=True)
     fecha_alta = Column(Date, server_default=func.curdate(), nullable=False)
 
-    pesadas = relationship("Pesada", back_populates="supplier")
+    tickets = relationship("TicketDB", back_populates="supplier")

@@ -10,4 +10,4 @@ class Product(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(200), nullable=False, unique=True)
 
-    pesadas = relationship("Pesada", back_populates="product")
+    tickets = relationship("TicketDB", back_populates="product")
