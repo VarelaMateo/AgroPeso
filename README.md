@@ -233,6 +233,42 @@ Si no está definida, se usa `http://localhost:5500` por defecto. Después de mo
 - Un origen se compone de protocolo, dominio y puerto, sin barra final. `localhost` y `127.0.0.1` son orígenes distintos para el navegador.
 - En GitHub Codespaces, si el puerto 8000 tiene visibilidad privada, las peticiones del navegador que no incluyen la sesión de GitHub pueden fallar con un error de CORS aunque la configuración sea correcta.
 
+### AGROPESO-008: Interfaz de usuario HTML con W3.CSS
+
+Se maquetó la vista web principal para el ingreso manual de los datos de pesaje, en `frontend/html/index.html`.
+
+- La hoja de estilos de W3.CSS se importa mediante CDN, por lo que no requiere instalación.
+- El formulario contiene los campos Chofer, Patente, Peso Tara, Peso Bruto y Proveedor.
+- El atributo `name` de cada input coincide con el campo correspondiente del esquema `TicketCreate` de la API, para poder armar el JSON sin traducir nombres.
+- Incluye validaciones básicas del navegador (campos obligatorios, pesos mayores a 0, largos máximos). La validación real sigue siendo la de la API.
+- Por ahora el formulario no envía datos: la conexión con la API se implementa en un ticket posterior.
+
+#### Campos del formulario
+
+| Campo | Tipo de input | Obligatorio | Campo de la API |
+|---|---|---|---|
+| Chofer | texto (máx. 200) | Sí | `chofer` |
+| Patente | texto (máx. 11) | No | `patente` |
+| Peso tara (kg) | número, mínimo 1 | Sí | `peso_tara` |
+| Peso bruto (kg) | número, mínimo 1 | Sí | `peso_bruto` |
+| Proveedor | lista desplegable | Sí | `supplier_id` |
+
+#### Cómo visualizar la página
+
+Desde la carpeta `frontend/html/`:
+
+```bash
+python3 -m http.server 5500
+```
+
+También se puede abrir con la extensión *Live Server* de VS Code (puerto 5500). En GitHub Codespaces, la página se abre desde la pestaña *Ports*.
+
+#### Pendientes conocidos
+
+- La lista de proveedores es provisoria (una opción fija). Se cargará dinámicamente cuando exista un endpoint para listar proveedores.
+- Los campos opcionales de la API (`product_id`, `transporte`, `numero_ticket`, `fecha`) todavía no están en el formulario.
+- En Codespaces, la dirección del frontend debe agregarse a `CORS_ORIGINS` en el `.env` para que el navegador permita las llamadas a la API.
+
 ## Entorno de desarrollo (GitHub Codespaces)
 
 - El servidor de base de datos es MariaDB, instalado dentro del Codespace (`sudo apt install mariadb-server`).
