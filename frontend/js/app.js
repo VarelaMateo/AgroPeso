@@ -26,7 +26,7 @@ form.addEventListener("submit", async (event) => {
 
     const datos = {
         chofer: form.chofer.value.trim(),
-        patente: form.patente.value.trim || null,
+        patente: form.patente.value.trim() || null,
         peso_tara: Number(form.peso_tara.value),
         peso_bruto: Number(form.peso_bruto.value),
         supplier_id: Number(form.supplier_id.value),
@@ -53,7 +53,7 @@ form.addEventListener("submit", async (event) => {
             `Pesada registrada. ID: ${cuerpo.id} - Peso neto: ${cuerpo.peso_neto} kg`,
             "ok"
         );
-        
+
         form.reset();
         } else if (cuerpo && cuerpo.detail) {
         mostrarMensaje(textoDeError(cuerpo.detail), "error");
