@@ -212,6 +212,27 @@ Se expusieron las funciones del servicio mediante peticiones HTTP, en `backend/r
 - `main.py` crea la aplicación FastAPI y registra el router.
 - Las excepciones del servicio se traducen a códigos HTTP en el router, porque conocer HTTP es responsabilidad de esta capa.
 
+### AGROPESO-007: Punto de entrada de la aplicación
+
+Se configuró el archivo principal `backend/main.py`, que inicializa el servidor FastAPI.
+
+- Crea la aplicación con `FastAPI` y registra el router de tickets con `app.include_router(ticket_router.router)`.
+- Configura `CORSMiddleware` para permitir peticiones desde el frontend. El navegador bloquea las peticiones entre orígenes distintos (otro dominio o puerto) salvo que la API responda con las cabeceras CORS correspondientes. Postman, `curl` y la página `/docs` no están sujetos a esta restricción.
+- Los orígenes permitidos no están escritos en el código: se leen de la variable `CORS_ORIGINS` del archivo `.env`, separados por coma.
+
+#### Variable de entorno
+
+| Variable | Descripción | Ejemplo |
+|---|---|---|
+| `CORS_ORIGINS` | Orígenes del frontend autorizados a llamar a la API, separados por coma y sin espacios | `http://localhost:5500,http://127.0.0.1:5500` |
+
+Si no está definida, se usa `http://localhost:5500` por defecto. Después de modificar el `.env`, hay que reiniciar el servidor para que tome el cambio.
+
+#### Notas
+
+- Un origen se compone de protocolo, dominio y puerto, sin barra final. `localhost` y `127.0.0.1` son orígenes distintos para el navegador.
+- En GitHub Codespaces, si el puerto 8000 tiene visibilidad privada, las peticiones del navegador que no incluyen la sesión de GitHub pueden fallar con un error de CORS aunque la configuración sea correcta.
+
 ## Entorno de desarrollo (GitHub Codespaces)
 
 - El servidor de base de datos es MariaDB, instalado dentro del Codespace (`sudo apt install mariadb-server`).
