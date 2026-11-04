@@ -255,19 +255,100 @@ Se maquetó la vista web principal para el ingreso manual de los datos de pesaje
 
 #### Cómo visualizar la página
 
-Desde la carpeta `frontend/html/`:
+Desde la carpeta `frontend/`:
 
 ```bash
 python3 -m http.server 5500
 ```
 
-También se puede abrir con la extensión *Live Server* de VS Code (puerto 5500). En GitHub Codespaces, la página se abre desde la pestaña *Ports*.
+y abrir `http://localhost:5500/html/index.html`. También se puede abrir con la extensión *Live Server* de VS Code (puerto 5500). En GitHub Codespaces, la página se abre desde la pestaña *Ports*.
 
 #### Pendientes conocidos
 
 - La lista de proveedores es provisoria (una opción fija). Se cargará dinámicamente cuando exista un endpoint para listar proveedores.
 - Los campos opcionales de la API (`product_id`, `transporte`, `numero_ticket`, `fecha`) todavía no están en el formulario.
 - En Codespaces, la dirección del frontend debe agregarse a `CORS_ORIGINS` en el `.env` para que el navegador permita las llamadas a la API.
+
+### AGROPESO-009: Conexión Frontend-Backend (JavaScript)
+
+Se conectó el formulario HTML con la API mediante JavaScript, en `frontend/js/app.js`. El script se vincula al final de `index.html` con `<script src="../js/app.js"></script>`, para que el formulario ya exista cuando se ejecute.
+
+#### Funcionamiento
+
+1. **Intercepta el envío del formulario.** Con `event.preventDefault()` se evita que el navegador recargue la página.
+2. **Construye el objeto JSON** a partir de los campos del formulario. Como cada input tiene un `name` igual al campo de `TicketCreate`, no hace falta traducir nombres:
+   - `peso_tara`, `peso_bruto` y `supplier_id` se convierten a número, porque los inputs entregan texto y la API rechaza un texto donde espera un entero.
+   - Una patente vacía se envía como `null`, que es lo que representa "sin patente" en el esquema.
+3. **Envía un `POST`** a `http://127.0.0.1:8000/tickets/` con `fetch()`, con la cabecera `Content-Type: application/json`.
+4. **Muestra el resultado** en el panel de mensajes del formulario.
+
+#### Resultados que muestra la interfaz
+
+| Situación | Código HTTP | Mensaje mostrado |
+|---|---|---|
+| Pesada registrada | 201 | Panel verde con el ID y el peso neto devueltos por la API. El formulario se vacía |
+| Se viola una regla del negocio (por ejemplo, bruto menor o igual a la tara) | 400 | Panel rojo con el mensaje del servicio |
+| Los datos no cumplen el formato del esquema | 422 | Panel rojo con el campo y el motivo del rechazo |
+| Error interno del servidor (por ejemplo, proveedor inexistente) | 500 | Panel rojo con un mensaje genérico con el código de error |
+| La API no está encendida o no es alcanzable | — | Panel rojo: "No se pudo conectar con el servidor" |
+
+#### Detalles de implementación
+
+- **Dos tipos de fallo.** Si la API responde con un error HTTP, `fetch()` no lanza una excepción: hay que revisar `respuesta.ok`. Solo cuando no hay conexión se lanza una excepción, que se atrapa con `try/catch`.
+- **Mensajes de error.** El campo `detail` de la respuesta es un texto en los errores 400 y 404, y una lista de objetos en los errores 422. La función `textoDeError` unifica los dos formatos.
+- **Seguridad.** Los mensajes se muestran con `textContent` y no con `innerHTML`, de modo que cualquier texto recibido se muestra como texto y no se interpreta como HTML.
+- **Envíos duplicados.** El botón se deshabilita mientras se procesa la petición y se vuelve a habilitar en el bloque `finally`, ocurra lo que ocurra.
+
+#### Cómo ejecutar y probar
+
+1. Iniciar la base de datos: `sudo service mariadb start`.
+2. Iniciar la API, desde `backend/`:
+
+   ```bash
+   uvicorn main:app --reload
+   ```
+
+3. Servir el frontend, desde la carpeta **`frontend/`** (no desde `frontend/html/`, porque el HTML necesita llegar a `../js/app.js`):
+
+   ```bash
+   cd frontend
+   python3 -m http.server 5500
+   ```
+
+4. Abrir `http://localhost:5500/html/index.html`.
+
+Para verificar que la pesada se guardó en la base:
+
+```bash
+sudo mysql AgroPeso -e "SELECT id, fecha, chofer, peso_tara, peso_bruto, peso_neto FROM tickets;"
+```
+
+#### Casos de prueba
+
+| Prueba | Resultado esperado |
+|---|---|
+| Datos válidos | Mensaje verde con ID y peso neto. La fila aparece en la tabla `tickets` |
+| Tara mayor que el bruto | Mensaje rojo con la regla de negocio |
+| API apagada (`Ctrl+C` en uvicorn) | Mensaje rojo de falta de conexión |
+
+#### Configuración según el entorno
+
+- La URL de la API está definida en la constante `API_URL` de `app.js`. Si el frontend se abre desde una dirección distinta a `localhost` (por ejemplo, una URL de GitHub Codespaces), hay que reemplazarla por la dirección pública del puerto 8000.
+- El origen desde el cual se abre el frontend (protocolo, dominio y puerto, sin barra final) debe estar incluido en `CORS_ORIGINS` del `.env`, y hay que reiniciar la API después de modificarlo.
+- En Codespaces, si el puerto 8000 tiene visibilidad privada, el navegador puede recibir un error de CORS aunque la configuración sea correcta. Para probar, se puede cambiar temporalmente a visibilidad pública (volviendo a privada al terminar).
+
+#### Diagnóstico de problemas
+
+Con las herramientas del navegador (`F12`):
+
+- **Console**: muestra errores de JavaScript y de CORS.
+- **Network**: muestra la petición enviada, su código de respuesta y el cuerpo.
+- Si al enviar el formulario la URL cambia (aparecen los datos como parámetros) o no aparece ningún mensaje, el script no se cargó: revisar la ruta del `<script>` y que la página se abra desde `/html/index.html`.
+
+#### Pendientes conocidos
+
+- Si el `supplier_id` no existe o el `numero_ticket` está repetido, la API responde 500 y la interfaz muestra un error genérico. Falta traducirlo a un error controlado (409) con un mensaje claro.
+- La lista de proveedores sigue siendo provisoria, hasta contar con un endpoint para listarlos.
 
 ## Entorno de desarrollo (GitHub Codespaces)
 
