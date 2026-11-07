@@ -19,7 +19,7 @@
 | `chofer` | texto | Sí | No vacío, máximo 200 caracteres |
 | `patente` | texto | No | Máximo 11 caracteres |
 | `peso_tara` | entero | Sí | Mayor a 0 |
-| `peso_bruto` | entero | Sí | Mayor a 0 |
+| `peso_bruto` | entero | No | Mayor a 0 |
 | `supplier_id` | entero | Sí | Mayor a 0 |
 | `product_id` | entero | No | Mayor a 0 |
 | `transporte` | texto | No | Por defecto `"Equipo"`, máximo 50 caracteres |
