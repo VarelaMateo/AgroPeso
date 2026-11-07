@@ -23,7 +23,7 @@ class Ticket:  # Entidad pura
     product_id: Optional[int] = None
     transporte: str = "Equipo"
     numero_ticket: Optional[int] = None
-    estado = EstadoTicket = EstadoTicket.ABIERTO
+    estado: EstadoTicket = EstadoTicket.ABIERTO
     id: Optional[int] = None
 
     @property

@@ -2,6 +2,8 @@ from datetime import date
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 
+from models.ticket_model import EstadoTicket, Ticket
+
 """
 Field(gt=0): el número tiene que ser mayor que 0.
 
@@ -21,7 +23,7 @@ class TicketBase(BaseModel):
     chofer: str = Field(min_length=1, max_length=200)
     patente: Optional[str] = Field(default=None, max_length=11)
     peso_tara: int = Field(gt=0)
-    peso_bruto: int = Field(gt=0)
+    peso_bruto: Optional[int] = Field(default=None, gt=0)
     supplier_id: int = Field(gt=0)
     product_id: Optional[int] = Field(default=None, gt=0)
     transporte: str = Field(default="Equipo", max_length=50)
@@ -44,10 +46,20 @@ class TicketCreate(TicketBase):
 
     fecha: date = Field(default_factory=date.today)
 
+class TicketClose (BaseModel):
+    """Lo que el cliente envía para cerrar un ticket abierto (segunda pesada)."""
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra = {"example": {"peso_bruto": 48260}}
+    )
+
+    peso_bruto: int = Field(gt=0)
+
 class TicketResponse(TicketBase):
     """Lo que la API devuelve."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     fecha: date
-    peso_neto: int
+    estado: EstadoTicket
+    peso_neto: Optional[int] = None
