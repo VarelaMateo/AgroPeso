@@ -58,6 +58,33 @@
     </form>
   </main>
 
+  <section class="w3-container w3-content w3-padding-bottom-32" style="max-width: 1000px;">
+    <div class="w3-card-4 w3-white w3-container w3-padding-16">
+      <h2 class="w3-center">Historial de pesadas</h2>
+
+      <div class="w3-responsive">
+        <table class="w3-table-all w3-hoverable">
+          <thead>
+            <tr class="w3-green">
+              <th>ID</th>
+              <th>Fecha</th>
+              <th>Chofer</th>
+              <th>Patente</th>
+              <th>Proveedor (ID)</th>
+              <th>Tara (kg)</th>
+              <th>Bruto (kg)</th>
+              <th>Neto (kg)</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-historial">
+            <tr><td colspan="9" class="w3-center">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <script src="../js/app.js"></script>
 </body>
 </html>

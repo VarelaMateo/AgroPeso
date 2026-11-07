@@ -28,7 +28,7 @@ def create_ticket(datos: TicketCreate, db: Session = Depends(get_db)):
 def listar_ticket(estado: Optional[EstadoTicket] = None, db: Session = Depends(get_db)):
     repository= TicketRepository(db)
     service = TicketService(repository)
-    return service.obtener_todos_tickets(estado)
+    return service.obtener_todos_los_tickets(estado)
 
 @router.get("/{ticket_id}", response_model=TicketResponse)
 def obtener_ticket(ticket_id: int, db: Session = Depends(get_db)):
