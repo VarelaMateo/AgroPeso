@@ -39,7 +39,7 @@ class TicketService:
             raise TicketNoEncontradoError(f"No existe el ticket con id {ticket_id}")     
         return ticket_encontrado
 
-    def obtener_todos_tickets (self, estado: Optional[EstadoTicket] = None) -> list[Ticket]:
+    def obtener_todos_los_tickets (self, estado: Optional[EstadoTicket] = None) -> list[Ticket]:
         return self.repository.get_all_tickets(estado)
 
     def validar_pesos (self, peso_tara: int, peso_bruto: int) -> None:
