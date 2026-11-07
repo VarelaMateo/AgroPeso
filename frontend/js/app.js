@@ -49,16 +49,17 @@ form.addEventListener("submit", async (event) => {
         }
 
         if (respuesta.ok) {
-        mostrarMensaje(
-            `Pesada registrada. ID: ${cuerpo.id} - Peso neto: ${cuerpo.peso_neto} kg`,
-            "ok"
-        );
+            mostrarMensaje(
+                `Pesada registrada. ID: ${cuerpo.id} - Peso neto: ${cuerpo.peso_neto} kg`,
+                "ok"
+            );
 
-        form.reset();
+            form.reset();
+            cargarHistorial();
         } else if (cuerpo && cuerpo.detail) {
-        mostrarMensaje(textoDeError(cuerpo.detail), "error");
+            mostrarMensaje(textoDeError(cuerpo.detail), "error");
         } else {
-        mostrarMensaje(`Error ${respuesta.status}: no se pudo registrar la pesada`, "error");
+            mostrarMensaje(`Error ${respuesta.status}: no se pudo registrar la pesada`, "error");
         }
     } catch (error) {
         mostrarMensaje("No se pudo conectar con el servidor. ¿Está encendida la API?", "error");
@@ -67,4 +68,81 @@ form.addEventListener("submit", async (event) => {
     }
 
 });
+
+const tablaHistorial = document.getElementById("tabla-historial");
+
+function crearCelda(texto) {
+    const td = document.createElement("td");
+    td.textContent = texto;
+    return td;
+}
+
+function crearCeldaEstado(estado) {
+    const td = document.createElement("td");
+    const etiqueta = document.createElement("span");
+
+    etiqueta.className = estado === "abierto" ? "w3-tag w3-orange" : "w3-tag w3-green";
+    etiqueta.textContent = estado;
+    td.appendChild(etiqueta);
+
+    return td;
+}
+
+function formatoFecha(fecha) {
+    return fecha.split("-").reverse().join("/") // 2026-11-07 -> 07/11/2026
+}
+
+function formatoPeso(valor) {
+    return valor === null ? "-": valor.toLocaleString("es-AR");
+}
+
+function mostrarFilaUnica(text) {
+    const fila = document.createElement("tr");
+    const celda = document.createElement("td");
+
+    celda.colSpan = 9;
+    celda.className = "w3-center";
+    celda.textContent = text;
+
+    fila.appendChild(celda);
+    tablaHistorial.replaceChildren(fila);
+}
+
+async function cargarHistorial(){
+    try{
+        const respuesta = await fetch(API_URL);
+        if (!respuesta.ok){
+            throw new Error(`Error ${respuesta.status}`);
+        }
+        const tickets = await respuesta.json()
+
+        if (tickets.length === 0) {
+            mostrarFilaUnica("Todavia no hay pesadas registradas");
+            return;
+        }
+
+        const filas = tickets.map((t) => {
+            const fila = document.createElement('tr');
+            fila.append(
+                crearCelda(t.id),
+                crearCelda(formatoFecha(t.fecha)),
+                crearCelda(t.chofer),
+                crearCelda(t.patente ?? "—"),
+                crearCelda(t.supplier_id),
+                crearCelda(formatoPeso(t.peso_tara)),
+                crearCelda(formatoPeso(t.peso_bruto)),
+                crearCelda(formatoPeso(t.peso_neto)),
+                crearCeldaEstado(t.estado)
+            );
+            return fila;
+        });
+
+        tablaHistorial.replaceChildren(...filas);
+    } catch (error) {
+        console.error("Error al cargar el historial:", error);
+        mostrarFilaUnica("No se pudo cargar el historial. ¿Está encendida la API?");
+    }
+}
+
+cargarHistorial();
 
