@@ -116,10 +116,12 @@ Router (FastAPI)  →  TicketService  →  TicketRepository  →  MySQL
 ---
 #### Endpoints
 
-| Método | Ruta | Descripción | Esquema de entrada | Respuesta |
-|---|---|---|---|---|
-| POST | `/tickets/` | Registra una pesada | `TicketCreate` | `TicketResponse` (201) |
-| GET | `/tickets/{ticket_id}` | Obtiene un ticket por id | — | `TicketResponse` (200) |
+| Método | Ruta | Descripción | Respuesta |
+|---|---|---|---|
+| GET | `/tickets/` | Lista los tickets, los más recientes primero. Filtro opcional `?estado=abierto` o `?estado=cerrado` | `list[TicketResponse]` (200) |
+| PATCH | `/tickets/{ticket_id}/cerrar` | Registra la segunda pesada y cierra el ticket | `TicketResponse` (200) |
+
+`POST /tickets/` ahora acepta pesadas sin `peso_bruto` (queda abierto) o con `peso_bruto` (queda cerrado).
 
 #### Códigos de respuesta
 
@@ -129,6 +131,67 @@ Router (FastAPI)  →  TicketService  →  TicketRepository  →  MySQL
 | 400 | Se viola una regla del negocio (por ejemplo, el peso bruto no es mayor a la tara) |
 | 404 | No existe el ticket solicitado |
 | 422 | El JSON no cumple el formato de los esquemas (tipos, valores negativos, campos desconocidos) |
+|---|---|
+| 400 | Al cerrar: el ticket ya está cerrado, o el peso bruto no es mayor a la tara |
+| 404 | Al cerrar: el ticket no existe |
+| 422 | `?estado=` con un valor que no es `abierto` ni `cerrado`, o `peso_bruto` menor o igual a 0 al cerrar |
+
+#### Ejemplos
+
+Abrir un ticket (`POST /tickets/`, sin `peso_bruto`):
+
+```json
+{
+  "chofer": "Ivan Derio",
+  "patente": "HKN279",
+  "peso_tara": 15160,
+  "supplier_id": 1
+}
+```
+
+Respuesta (201):
+
+```json
+{
+  "chofer": "Ivan Derio",
+  "patente": "HKN279",
+  "peso_tara": 15160,
+  "peso_bruto": null,
+  "supplier_id": 1,
+  "product_id": null,
+  "transporte": "Equipo",
+  "numero_ticket": null,
+  "id": 1,
+  "fecha": "2026-11-07",
+  "estado": "abierto",
+  "peso_neto": null
+}
+```
+
+Cerrar el ticket (`PATCH /tickets/1/cerrar`):
+
+```json
+{
+  "peso_bruto": 48260
+}
+```
+
+La respuesta (200) devuelve el ticket con `"estado": "cerrado"`, `"peso_bruto": 48260` y `"peso_neto": 33100`.
+
+Listar solo los tickets abiertos: `GET /tickets/?estado=abierto`.
+
+#### Actualizar una base de datos existente
+
+`create_table.py` crea las tablas desde cero con la columna `estado`. Si la tabla `tickets` ya existía, hay que modificarla a mano (`create_all` no altera tablas existentes). Los tickets ya cargados se marcan como cerrados:
+
+```bash
+sudo mysql AgroPeso -e "
+ALTER TABLE tickets
+  MODIFY peso_bruto INT NULL,
+  MODIFY peso_neto INT NULL,
+  ADD COLUMN estado VARCHAR(10) NOT NULL DEFAULT 'abierto';
+UPDATE tickets SET estado = 'cerrado' WHERE peso_bruto IS NOT NULL;"
+```
 
 #### Cómo ejecutar la API
 
@@ -146,10 +209,36 @@ La documentación interactiva, donde se pueden probar los endpoints, está dispo
 HTTP  →  Router (esquemas)  →  TicketService (reglas)  →  TicketRepository  →  MySQL
 ```
 
+#### Estados del ticket
+
+| Estado | Significado | Datos |
+|---|---|---|
+| `abierto` | Se registró solo la primera pesada (la tara) | `peso_bruto` y `peso_neto` vacíos (`null`) |
+| `cerrado` | Se registró la segunda pesada (el peso bruto) | `peso_neto = peso_bruto - peso_tara` |
+
+Reglas de negocio (en `TicketService`):
+
+- La primera pesada es la tara. El estado lo decide el servicio y el cliente no puede enviarlo (la API responde 422).
+- Al registrar una pesada sin `peso_bruto`, el ticket queda abierto. Si se envía `peso_bruto`, se valida que sea mayor a la tara y el ticket queda cerrado.
+- Un ticket solo se puede cerrar si existe, está abierto y el peso bruto es mayor a la tara.
+
+
 #### Pendientes conocidos
 
 - Si el `supplier_id` no existe o el `numero_ticket` está repetido, MySQL rechaza la operación y la API responde 500. Falta traducirlo a un error controlado (por ejemplo, 409).
+- La interfaz web todavía envía siempre tara y bruto, por lo que crea tickets cerrados. Falta una pantalla para abrir un ticket y cerrarlo después.
+- Se asume que la primera pesada es la tara. Si hay operaciones donde el camión llega cargado, habrá que revisar este supuesto.
+- El listado trae todos los tickets. Más adelante conviene paginarlo (`limit` y `offset`).
+- Los cambios en las tablas se hacen con `ALTER TABLE` manual. A futuro conviene usar migraciones con Alembic.
 ---
+
+#### Tests
+
+Se reescribieron con `pytest` (se ejecutan con `pytest` desde `backend/`):
+
+- `test_schemas.py`: validaciones de los esquemas.
+- `test_server.py`: reglas del servicio, con un repositorio en memoria (sin base de datos).
+- `test_repository.py`: repositorio contra la base real. Usa las fixtures de `conftest.py`, que deshacen los cambios al terminar, por lo que requiere MariaDB encendido y no deja datos de prueba.
 
 ## Historial de tickets
 
@@ -349,6 +438,21 @@ Con las herramientas del navegador (`F12`):
 
 - Si el `supplier_id` no existe o el `numero_ticket` está repetido, la API responde 500 y la interfaz muestra un error genérico. Falta traducirlo a un error controlado (409) con un mensaje claro.
 - La lista de proveedores sigue siendo provisoria, hasta contar con un endpoint para listarlos.
+
+### AGROPESO-010: Listado de tickets y flujo de tickets abiertos y cerrados
+
+Se creó el endpoint para listar el historial de pesadas, con filtro opcional por estado. Para poder filtrar se incorporó el concepto de **estado del ticket**, que permite registrar una pesada en dos momentos: la primera pesada abre el ticket y la segunda lo cierra.
+
+#### Cambios por capa
+
+| Capa | Archivo | Cambio |
+|---|---|---|
+| Dominio y datos | `models/ticket_model.py` | Enumeración `EstadoTicket`, campo `estado` en `Ticket` y `TicketDB`. `peso_bruto` y `peso_neto` admiten nulos |
+| Acceso a datos | `repository/ticket_repository.py` | `get_all_tickets(estado=None)` y `update_ticket(ticket)` |
+| Negocio | `services/ticket_service.py` | `obtener_todos_los_tickets(estado=None)`, `cerrar_ticket(ticket_id, peso_bruto)` y validación de pesos compartida |
+| Presentación | `schemas/ticket_schema.py` | `peso_bruto` opcional, `estado` en `TicketResponse` y nuevo esquema `TicketClose` |
+| Presentación | `routers/ticket_router.py` | `GET /tickets/` y `PATCH /tickets/{ticket_id}/cerrar` |
+
 
 ## Entorno de desarrollo (GitHub Codespaces)
 
