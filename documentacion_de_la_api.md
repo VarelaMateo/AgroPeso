@@ -1,0 +1,85 @@
+# Documentación de la API (AgroPeso)
+
+## Endpoints
+
+| Método | Ruta | Descripción | Respuesta |
+|---|---|---|---|
+| **GET** | `/tickets/` | Lista los tickets, los más recientes primero. Filtro opcional `?estado=abierto` o `?estado=cerrado` | `list[TicketResponse]` (200) |
+| **POST** | `/tickets/` | Registra una nueva pesada. Si se envía sin `peso_bruto` queda abierto. | `TicketResponse` (201) |
+| **PATCH** | `/tickets/{ticket_id}/cerrar`| Registra la segunda pesada y cierra el ticket. | `TicketResponse` (200) |
+
+---
+
+## Esquemas de Datos
+
+### Campos de `TicketCreate` (JSON de entrada)
+
+| Campo | Tipo | Obligatorio | Regla |
+|---|---|---|---|
+| `chofer` | texto | Sí | No vacío, máximo 200 caracteres |
+| `patente` | texto | No | Máximo 11 caracteres |
+| `peso_tara` | entero | Sí | Mayor a 0 |
+| `peso_bruto` | entero | Sí | Mayor a 0 |
+| `supplier_id` | entero | Sí | Mayor a 0 |
+| `product_id` | entero | No | Mayor a 0 |
+| `transporte` | texto | No | Por defecto `"Equipo"`, máximo 50 caracteres |
+| `numero_ticket` | entero | No | Único en la base de datos |
+| `fecha` | fecha | No | Por defecto, la fecha de hoy |
+
+*Nota: `TicketResponse` (lo que sale) incluye los mismos campos, más `id`, `estado` y `peso_neto` (calculado).*
+
+---
+
+## Estados del Ticket
+
+| Estado | Significado | Datos |
+|---|---|---|
+| `abierto` | Se registró solo la primera pesada (la tara) | `peso_bruto` y `peso_neto` vacíos (`null`) |
+| `cerrado` | Se registró la segunda pesada (el peso bruto) | `peso_neto = peso_bruto - peso_tara` |
+
+**Reglas de negocio:**
+* La primera pesada es la tara. El estado lo decide el servicio; el cliente no puede enviarlo.
+* Un ticket solo se puede cerrar si existe, está abierto y el peso bruto es mayor a la tara.
+
+---
+
+## Códigos de Respuesta HTTP
+
+| Código | Cuándo ocurre |
+|---|---|
+| **200 / 201** | La operación se realizó correctamente. |
+| **400** | Violación de regla de negocio (ej: bruto no es mayor a la tara, o ticket ya cerrado). |
+| **404** | No existe el ticket solicitado. |
+| **422** | El JSON no cumple el formato (tipos incorrectos, valores negativos, filtro de estado inválido). |
+| **500** | Error interno (ej: `supplier_id` inexistente rechazada por MySQL). |
+
+---
+
+## Ejemplos de Solicitudes
+
+**Abrir un ticket (`POST /tickets/`, sin `peso_bruto`):**
+```json
+{
+  "chofer": "Ivan Derio",
+  "patente": "HKN279",
+  "peso_tara": 15160,
+  "supplier_id": 1
+}
+```
+*Respuesta (201): Devuelve el ticket con `"estado": "abierto"` y pesos neto/bruto en `null`.*
+
+**Cerrar el ticket (`PATCH /tickets/1/cerrar`):**
+```json
+{
+  "peso_bruto": 48260
+}
+```
+*Respuesta (200): Devuelve el ticket con `"estado": "cerrado"`, `"peso_bruto": 48260` y `"peso_neto": 33100`.*
+
+---
+
+## Pendientes conocidos
+* Si el `supplier_id` no existe o el `numero_ticket` está repetido, MySQL rechaza la operación y la API responde 500. Falta traducirlo a un error controlado (409).
+* La interfaz web actual envía siempre tara y bruto. Falta UI para abrir/cerrar.
+* Asunción: La primera pesada es la tara. Revaluar si hay camiones que llegan cargados.
+* Paginación pendiente para el `GET /tickets/`.
