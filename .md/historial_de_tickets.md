@@ -49,3 +49,65 @@ Este documento registra los Sprints y tareas completadas en la evolución del pr
 * Incorporación de la enumeración `EstadoTicket`.
 * Endpoints para listar (`GET`) y cerrar (`PATCH`) tickets.
 * Lógica modificada para admitir tickets sin `peso_bruto` en su creación inicial.
+
+### AGROPESO-012: Interfaz del historial (HTML + JS)
+
+Se agregó a la interfaz web una tabla con los tickets registrados, que consume el endpoint `GET /tickets/`.
+
+- **`frontend/html/index.html`**: nueva sección debajo del formulario, con una tabla de W3.CSS (`w3-table-all`, con scroll horizontal en pantallas chicas). Tiene su propio contenedor, más ancho que el del formulario, para que las columnas no queden apretadas.
+- **`frontend/js/app.js`**: la función `cargarHistorial()` hace un `fetch()` GET a la API y dibuja las filas de la tabla de forma dinámica.
+
+#### Cuándo se carga
+
+- Al abrir la página.
+- Cada vez que se registra una pesada desde el formulario, para que el nuevo ticket aparezca sin recargar.
+
+#### Columnas
+
+| Columna | Campo de la API | Formato |
+|---|---|---|
+| ID | `id` | Número |
+| Fecha | `fecha` | `día/mes/año` |
+| Chofer | `chofer` | Texto |
+| Patente | `patente` | Texto, o `—` si no tiene |
+| Proveedor (ID) | `supplier_id` | Número |
+| Tara (kg) | `peso_tara` | Con separador de miles |
+| Bruto (kg) | `peso_bruto` | Con separador de miles, o `—` si el ticket está abierto |
+| Neto (kg) | `peso_neto` | Con separador de miles, o `—` si el ticket está abierto |
+| Estado | `estado` | Etiqueta de color: naranja (`abierto`) o verde (`cerrado`) |
+
+Los tickets se muestran del más reciente al más antiguo, que es el orden en que los devuelve la API.
+
+#### Mensajes de la tabla
+
+| Situación | Lo que se muestra |
+|---|---|
+| Mientras carga | "Cargando..." |
+| No hay tickets en la base | "Todavía no hay pesadas registradas" |
+| La API no responde o devuelve un error | "No se pudo cargar el historial. ¿Está encendida la API?" (el detalle del error queda en la consola del navegador) |
+
+#### Detalles de implementación
+
+- Las filas se construyen con `createElement` y `textContent`, no con `innerHTML`, de modo que cualquier texto recibido (por ejemplo, un nombre de chofer) se muestra como texto y no se interpreta como HTML.
+- Para vaciar y volver a llenar la tabla se usa `replaceChildren()`, que reemplaza todas las filas de una vez. No confundir con `replaceChild()`, que reemplaza un único hijo y falla si no se le indica cuál.
+- El navegador exige que el origen desde el que se abre el frontend esté incluido en `CORS_ORIGINS` del `.env`. `http://localhost:5500` y `http://127.0.0.1:5500` son orígenes distintos, por lo que conviene incluir ambos. Después de modificar el `.env` hay que reiniciar la API por completo, ya que `--reload` no vigila ese archivo.
+
+#### Cómo probarlo
+
+1. Iniciar MariaDB y la API (`uvicorn main:app --reload`, desde `backend/`).
+2. Servir el frontend desde la carpeta `frontend/` con `python3 -m http.server 5500`.
+3. Abrir `http://localhost:5500/html/index.html`.
+
+| Prueba | Resultado esperado |
+|---|---|
+| Abrir la página | La tabla muestra los tickets existentes, los más nuevos arriba |
+| Un ticket abierto | Etiqueta naranja y `—` en bruto y neto |
+| Registrar una pesada desde el formulario | Aparece arriba en la tabla sin recargar la página |
+| Apagar la API y recargar | Fila con el mensaje de que no se pudo cargar el historial |
+
+#### Pendientes conocidos
+
+- La columna de proveedor muestra el ID, porque la API de tickets devuelve solo `supplier_id`. Para mostrar el nombre hace falta un endpoint de proveedores.
+- La tabla muestra todos los tickets. Más adelante conviene paginarla y agregar un filtro por estado (la API ya lo soporta con `?estado=abierto` o `?estado=cerrado`).
+- Desde la interfaz todavía no se puede cerrar un ticket abierto (el endpoint `PATCH /tickets/{ticket_id}` ya existe, falta la pantalla).
+- No hay tests automáticos del router ni del frontend, y un error de nombres como el de `obtener_todos_los_tickets` solo se detectó al probar a mano.
