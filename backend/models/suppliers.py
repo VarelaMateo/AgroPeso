@@ -1,8 +1,16 @@
+from dataclasses import dataclass
+from typing import Optional
+
 from sqlalchemy import Column, Integer, String, Date, func
 from sqlalchemy.orm import relationship
 
 from config.database import Base
 
+
+@dataclass
+class SupplierEntity:
+    name: str
+    id: Optional[int] = None
 
 class Supplier(Base):
     __tablename__ = "suppliers"
