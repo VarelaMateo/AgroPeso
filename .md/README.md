@@ -515,6 +515,77 @@ Los tickets se muestran del más reciente al más antiguo, que es el orden en qu
 - Desde la interfaz todavía no se puede cerrar un ticket abierto (el endpoint `PATCH /tickets/{ticket_id}` ya existe, falta la pantalla).
 - No hay tests automáticos del router ni del frontend, y un error de nombres como el de `obtener_todos_los_tickets` solo se detectó al probar a mano.
 
+### AGROPESO-013: Endpoints de proveedores (backend)
+
+Se implementó el flujo completo (esquemas, repositorio, servicio y router) para listar y crear proveedores, de modo que el frontend pueda dejar de usar una lista fija.
+
+#### Archivos
+
+| Capa | Archivo | Contenido |
+|---|---|---|
+| Dominio y datos | `models/suppliers.py` | Entidad pura `SupplierEntity` y modelo `Supplier` de SQLAlchemy |
+| Presentación | `schemas/supplier_schema.py` | `SupplierCreate` y `SupplierResponse` |
+| Acceso a datos | `repository/supplier_repository.py` | `get_all_suppliers()` y `create_supplier()` |
+| Negocio | `services/supplier_service.py` | `obtener_todos_los_proveedores()` y `crear_proveedor()` |
+| Presentación | `routers/supplier_router.py` | `GET /suppliers/` y `POST /suppliers/`, registrado en `main.py` |
+
+#### Endpoints
+
+| Método | Ruta | Descripción | Esquema de entrada | Respuesta |
+|---|---|---|---|---|
+| GET | `/suppliers/` | Lista los proveedores, ordenados por nombre | — | `list[SupplierResponse]` (200) |
+| POST | `/suppliers/` | Crea un proveedor | `SupplierCreate` | `SupplierResponse` (201) |
+
+#### Esquemas
+
+| Esquema | Campo | Tipo | Regla |
+|---|---|---|---|
+| `SupplierCreate` | `name` | texto | Obligatorio, se eliminan los espacios de los extremos, no puede quedar vacío, máximo 200 caracteres. No admite campos extra |
+| `SupplierResponse` | `id` | entero | Asignado por la base de datos |
+| `SupplierResponse` | `name` | texto | Nombre del proveedor |
+
+Ejemplo (`POST /suppliers/`):
+
+```json
+{
+  "name": "Berg"
+}
+```
+
+Respuesta (201):
+
+```json
+{
+  "id": 1,
+  "name": "Berg"
+}
+```
+
+#### Códigos de respuesta
+
+| Código | Cuándo ocurre |
+|---|---|
+| 200 | Listado correcto (devuelve `[]` si no hay proveedores) |
+| 201 | Proveedor creado |
+| 422 | El nombre falta, está vacío o supera los 200 caracteres, o se envían campos que no corresponden |
+
+#### Decisiones de diseño
+
+- El campo se llama `name` (y no `nombre`) para coincidir con el modelo de la base de datos y evitar traducciones entre capas.
+- Se creó la entidad pura `SupplierEntity`, de modo que el repositorio devuelva entidades y nunca objetos de SQLAlchemy, igual que con los tickets. Se llama así porque `Supplier` ya es el modelo de la tabla.
+- Solo se maneja el nombre. Las columnas `cuit` y `phone` quedan vacías, y `fecha_alta` la completa la base de datos.
+
+#### Tests
+
+`tests/test_suppliers.py` cubre los esquemas, el servicio (con un repositorio en memoria) y el repositorio contra la base real (con las fixtures de `conftest.py`, que deshacen los cambios al terminar).
+
+#### Pendientes conocidos
+
+- El formulario del frontend todavía usa una lista fija de proveedores; falta que cargue las opciones desde `GET /suppliers/` y que la tabla del historial muestre el nombre en lugar del ID.
+- No se valida que el nombre sea único: se pueden crear dos proveedores con el mismo nombre.
+- No hay endpoints para obtener, editar ni eliminar un proveedor individual, ni se pueden cargar `cuit` y `phone`.
+- Un `supplier_id` inexistente al registrar una pesada sigue devolviendo 500.
+
 ## Entorno de desarrollo (GitHub Codespaces)
 
 - El servidor de base de datos es MariaDB, instalado dentro del Codespace (`sudo apt install mariadb-server`).
