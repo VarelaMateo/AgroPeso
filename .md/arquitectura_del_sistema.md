@@ -32,6 +32,22 @@ Cada capa de la arquitectura tiene su propia forma de ver un ticket, por eso no 
 * Los modelos de SQLAlchemy solo se usan dentro del repositorio.
 * La conversión entre una representación y otra la hace la capa que está en el límite: el repositorio convierte entre `Ticket` y `TicketDB`, y el router convierte entre los esquemas y `Ticket`.
 
+```
+### Entidades Auxiliares (Proveedores)
+
+El mismo principio de separación de responsabilidades se aplica a los proveedores:
+
+| Clase | Capa | Para qué sirve |
+|---|---|---|
+| `Supplier` | Acceso a datos | Modelo de SQLAlchemy para guardar/leer en MySQL |
+| `SupplierEntity` | Negocio | Entidad pura de dominio, sin dependencias externas |
+| `SupplierCreate` / `SupplierResponse` | Presentación | Esquemas Pydantic para validar los JSON en la API |
+
+El `SupplierRepository` actúa como frontera: recibe `SupplierEntity` de la capa de negocio, la convierte a `Supplier` para la base de datos, y devuelve nuevamente una `SupplierEntity`.
+```
+
+---
+
 ### Flujo completo de una petición
 
 ```text
