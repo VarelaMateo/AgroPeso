@@ -78,6 +78,34 @@
 
 ---
 
+## Proveedores
+
+#### Endpoints
+
+| Método | Ruta | Descripción | Respuesta |
+|---|---|---|---|
+| GET | `/suppliers/` | Lista los proveedores, ordenados por nombre | `list[SupplierResponse]` (200) |
+| POST | `/suppliers/` | Crea un proveedor | `SupplierResponse` (201) |
+
+#### Esquemas
+
+| Esquema | Campo | Tipo | Regla |
+|---|---|---|---|
+| `SupplierCreate` | `name` | texto | Obligatorio, sin espacios en los extremos, no vacío, máx 200 caracteres. (Forbid extra) |
+| `SupplierResponse` | `id` | entero | Asignado por la base de datos |
+| `SupplierResponse` | `name` | texto | Nombre del proveedor |
+
+**Ejemplo de creación (`POST /suppliers/`):**
+
+Petición:
+```json
+{
+  "name": "Berg"
+}
+ ```
+
+---
+
 ## Pendientes conocidos
 * Si el `supplier_id` no existe o el `numero_ticket` está repetido, MySQL rechaza la operación y la API responde 500. Falta traducirlo a un error controlado (409).
 * La interfaz web actual envía siempre tara y bruto. Falta UI para abrir/cerrar.
