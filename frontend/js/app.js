@@ -137,7 +137,8 @@ async function cargarHistorial(){
             return fila;
         });
 
-        tablaHistorial.replaceChildren(...filas);
+        tablaHistorial.replaceChildren
+        (...filas);
     } catch (error) {
         console.error("Error al cargar el historial:", error);
         mostrarFilaUnica("No se pudo cargar el historial. ¿Está encendida la API?");
