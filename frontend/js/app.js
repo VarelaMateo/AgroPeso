@@ -128,7 +128,7 @@ async function cargarHistorial(){
                 crearCelda(formatoFecha(t.fecha)),
                 crearCelda(t.chofer),
                 crearCelda(t.patente ?? "—"),
-                crearCelda(t.supplier_id),
+                crearCelda(proveedoresPorId[t.supplier_id] ?? t.supplier_id),
                 crearCelda(formatoPeso(t.peso_tara)),
                 crearCelda(formatoPeso(t.peso_bruto)),
                 crearCelda(formatoPeso(t.peso_neto)),
@@ -145,5 +145,48 @@ async function cargarHistorial(){
     }
 }
 
-cargarHistorial();
+
+const API_PROVEEDORES = "http://127.0.0.1:8000/suppliers/";
+const selectProveedores = document.getElementById("supplier_id");
+
+function crearOpcion(valor, texto, esPlaceholder = false) {
+    const opcion = document.createElement("option");
+    opcion.value = valor;
+    opcion.textContent = texto;
+    if (esPlaceholder) {
+        opcion.disable = true;
+        opcion.defaultSelected = true; //para que form.reset() vuelve a esta opcion 
+    }
+    return opcion;
+
+}
+
+let proveedoresPorId = {};
+
+async function cargarProveedores() {
+    try {
+        const respuesta = await fetch(API_PROVEEDORES);
+        if (!respuesta.ok){
+            throw new Error (`Error ${respuesta.status}`);
+        }
+        const proveedores = await respuesta.json();
+        proveedoresPorId = Object.fromEntries(proveedores.map((p) => [p.id, p.name]));
+        const textoInicial = proveedores.length === 0 ? "No hay proveedores cargados" : "Elegi un proveedor";
+        const opciones = [crearOpcion("", textoInicial, true)];
+        for (const proveedor of proveedores){
+            opciones.push(crearOpcion(proveedor.id, proveedor.name));
+        }
+        selectProveedores.replaceChildren(...opciones);
+    } catch (error){
+        console.error("Error al cargar los proveedores:", error);
+        selectProveedores.replaceChildren(crearOpcion("", "No se pudieron cargar los proveedores", true))
+    }
+}
+
+
+async function iniciar() {
+    await cargarProveedores();
+    await cargarHistorial();
+}
+iniciar();
 
