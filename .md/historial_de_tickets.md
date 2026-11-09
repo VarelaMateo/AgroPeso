@@ -111,3 +111,39 @@ Los tickets se muestran del más reciente al más antiguo, que es el orden en qu
 - La tabla muestra todos los tickets. Más adelante conviene paginarla y agregar un filtro por estado (la API ya lo soporta con `?estado=abierto` o `?estado=cerrado`).
 - Desde la interfaz todavía no se puede cerrar un ticket abierto (el endpoint `PATCH /tickets/{ticket_id}` ya existe, falta la pantalla).
 - No hay tests automáticos del router ni del frontend, y un error de nombres como el de `obtener_todos_los_tickets` solo se detectó al probar a mano.
+
+## AGROPESO-014: Desplegable dinámico de proveedores
+
+El campo **Proveedor** del formulario dejó de tener opciones escritas a mano en el HTML: ahora se llena solo con los proveedores que existen en la base de datos.
+
+### Cómo funciona
+
+1. Al cargar la página, `iniciar()` ejecuta `cargarProveedores()`.
+2. `cargarProveedores()` hace un `fetch` a `GET /suppliers/` (endpoint del ticket 13).
+3. Con el JSON recibido (`[{id, name}, ...]`) se crean los elementos `<option>`: el `value` es el **id** del proveedor (lo que se envía al backend) y el texto visible es el **nombre**.
+4. Las opciones se colocan en el `<select id="supplier_id">` con `replaceChildren()`.
+5. Una vez cargados los proveedores, `iniciar()` carga el historial, que muestra el **nombre** del proveedor en cada fila (a partir del mapa `proveedoresPorId`) en lugar de su ID.
+
+### Estados del desplegable
+
+| Situación | Texto mostrado |
+|---|---|
+| Mientras carga | Cargando proveedores... |
+| Carga correcta | Elegí un proveedor |
+| No hay proveedores en la base | No hay proveedores cargados |
+| Falla el fetch o responde error | No se pudieron cargar los proveedores |
+
+### Decisiones técnicas
+
+- **`createElement` + `textContent`** en lugar de `innerHTML`: evita inyección de HTML si un nombre de proveedor contiene caracteres especiales.
+- **`defaultSelected` en el placeholder**: así `form.reset()` vuelve al texto inicial en lugar de dejar el último proveedor elegido.
+- **`proveedoresPorId` con fallback (`?? supplier_id`)**: si un ticket referencia un proveedor que ya no está en la lista, se muestra el ID en vez de una celda vacía.
+- **Orden de carga con `async/await`**: el historial espera a los proveedores para poder mostrar nombres desde el primer dibujado.
+
+### Cómo probarlo
+
+1. Levantar el backend y servir el frontend (`python3 -m http.server 5500` desde `frontend/`).
+2. Abrir `http://localhost:5500/html/index.html`. Si no se ven cambios, forzar la recarga con `Ctrl + Shift + R` (caché del navegador).
+3. Verificar que el desplegable muestre los proveedores por nombre y que el historial muestre el nombre en la columna *Proveedor*.
+4. Crear un proveedor nuevo desde `/docs` (`POST /suppliers/`), recargar la página y comprobar que aparece en la lista.
+5. Apagar el backend y recargar: debe aparecer "No se pudieron cargar los proveedores".
