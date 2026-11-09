@@ -186,3 +186,48 @@ El operador ya puede cerrar un ticket abierto desde la tabla del historial, regi
 3. Probar un bruto menor o igual a la tara: debe mostrarse el error del backend.
 4. Cancelar el prompt o ingresar texto: no debe cambiar nada.
 5. Verificar que los tickets cerrados no muestran el botón.
+
+## AGROPESO-016: Modelo de usuario y repositorio (backend)
+
+Se creó la base para el login y los roles: la tabla de usuarios, sus schemas y el repositorio. Todavía no hay endpoints ni hash de contraseñas; eso se agrega en los próximos tickets.
+
+### Archivos
+
+| Archivo | Contenido |
+|---|---|
+| `models/user_model.py` | Enum `Rol`, entidad pura `User` y modelo SQLAlchemy `UserDB` |
+| `schemas/user_schema.py` | `UserCreate` (entrada) y `UserResponse` (salida) |
+| `repository/user_repository.py` | `UserRepository` con `get_user_by_username` y `create_user` |
+| `tests/test_users.py` | Tests del repositorio y de la regla de negocio |
+
+### Tabla `users`
+
+| Columna | Tipo | Detalle |
+|---|---|---|
+| `id` | Integer | Clave primaria, autoincremental |
+| `username` | String(50) | Único, obligatorio |
+| `password_hash` | String(255) | Obligatorio; nunca se guarda el texto plano |
+| `rol` | String(10) | `admin` o `cliente` |
+| `supplier_id` | Integer | FK a `suppliers.id`, anulable |
+
+Un usuario **cliente** se vincula a su proveedor mediante `supplier_id`, lo que permite más adelante mostrarle solo sus propios tickets.
+
+### Regla de negocio
+
+- Rol `cliente` → `supplier_id` **obligatorio**.
+- Rol `admin` → `supplier_id` debe ser **nulo**.
+
+Se valida en `UserCreate` con un `model_validator`; si se viola, la API responde 422.
+
+### Decisiones técnicas
+
+- **Entidad pura + modelo de base**: igual que en tickets, `User` no depende de SQLAlchemy y el repositorio convierte entre ambos (`_to_db`, `_to_entity`).
+- **Enum `Rol`**: se guarda como texto en la base, pero en Python no se puede usar un rol inválido.
+- **`UserResponse` sin contraseña**: lo que no está declarado en el schema de salida nunca se devuelve.
+- **`UserCreate` recibe `password`, el repositorio recibe `password_hash`**: el paso de hashear queda para el service.
+- **`create_all` no modifica tablas existentes**: si cambia la estructura de `users`, hay que borrar la tabla y recrearla (o usar `ALTER TABLE`).
+
+### Cómo probarlo
+
+1. Ejecutar `python create_table.py` desde `backend/` para crear la tabla `users`.
+2. Ejecutar `pytest`: deben pasar todos los tests, incluidos los 6 de `test_users.py`.
