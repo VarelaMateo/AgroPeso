@@ -147,3 +147,42 @@ El campo **Proveedor** del formulario dejó de tener opciones escritas a mano en
 3. Verificar que el desplegable muestre los proveedores por nombre y que el historial muestre el nombre en la columna *Proveedor*.
 4. Crear un proveedor nuevo desde `/docs` (`POST /suppliers/`), recargar la página y comprobar que aparece en la lista.
 5. Apagar el backend y recargar: debe aparecer "No se pudieron cargar los proveedores".
+
+## AGROPESO-015: Interfaz de cierre de ticket (frontend)
+
+El operador ya puede cerrar un ticket abierto desde la tabla del historial, registrando el peso bruto (segunda pesada) sin usar Swagger.
+
+### Cómo funciona
+
+1. `cargarHistorial()` dibuja cada fila y, en la columna **Acciones**, llama a `crearCeldaAcciones(ticket)`.
+2. Si el ticket está **abierto**, la celda muestra un botón **Cerrar**; si está **cerrado**, queda vacía.
+3. Al hacer clic se ejecuta `cerrarTicket(id)`:
+   - Muestra un `prompt()` con el texto "Ingrese el peso bruto:".
+   - Si el operador cancela, no pasa nada.
+   - Valida que el valor sea un número entero mayor a 0.
+   - Envía `PATCH /tickets/{id}/cerrar` con el cuerpo `{"peso_bruto": valor}`.
+4. Si la respuesta es exitosa (200 OK), se vuelve a llamar a `cargarHistorial()` y la fila pasa a estado **cerrado**, mostrando el peso bruto y el peso neto.
+
+### Manejo de errores
+
+| Situación | Resultado |
+|---|---|
+| El operador cancela el prompt | No se hace nada |
+| Valor vacío, no numérico o <= 0 | Alert con el mensaje de validación, sin llamar al backend |
+| El backend rechaza (ej. peso bruto <= tara) | Alert con el detalle devuelto por la API |
+| Sin conexión con el servidor | Alert genérico y error en consola |
+
+### Decisiones técnicas
+
+- **Validación en dos capas**: el frontend filtra entradas obvias para ahorrar una petición, y el backend mantiene la regla de negocio (el bruto debe superar la tara).
+- **`addEventListener` en vez de `onclick` en el HTML**: evita armar código dentro de strings y pasa el `id` correctamente a cada botón.
+- **Refresco con `cargarHistorial()`**: la tabla siempre refleja lo que está guardado en la base, no un estado local.
+- **`prompt()` nativo**: solución simple para esta etapa; más adelante puede reemplazarse por un modal.
+
+### Cómo probarlo
+
+1. Crear un ticket solo con tara: debe aparecer con el botón **Cerrar**.
+2. Cerrarlo con un peso bruto mayor a la tara: la fila pasa a cerrado y muestra el peso neto.
+3. Probar un bruto menor o igual a la tara: debe mostrarse el error del backend.
+4. Cancelar el prompt o ingresar texto: no debe cambiar nada.
+5. Verificar que los tickets cerrados no muestran el botón.
