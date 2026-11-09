@@ -23,12 +23,14 @@ function textoDeError (detail){
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault() //Evita que el navegador recargue la pagina
+    
+    const brutoTexto = document.getElementById("peso_bruto").value.trim();
 
     const datos = {
         chofer: form.chofer.value.trim(),
         patente: form.patente.value.trim() || null,
-        peso_tara: Number(form.peso_tara.value),
-        peso_bruto: Number(form.peso_bruto.value),
+        peso_tara: Number(form.peso_tara.value),    
+        peso_bruto: brutoTexto === "" ? null : Number(brutoTexto),
         supplier_id: Number(form.supplier_id.value),
     }
 
@@ -50,7 +52,7 @@ form.addEventListener("submit", async (event) => {
 
         if (respuesta.ok) {
             mostrarMensaje(
-                `Pesada registrada. ID: ${cuerpo.id} - Peso neto: ${cuerpo.peso_neto} kg`,
+                `Pesada registrada. ID: ${cuerpo.id}`,
                 "ok"
             );
 
