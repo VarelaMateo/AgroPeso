@@ -88,6 +88,57 @@ function crearCeldaEstado(estado) {
     return td;
 }
 
+async function cerrarTicket(id) {
+    const entrada = prompt("Ingrese el peso bruto");
+
+    if (entrada === null) return;
+
+    const pesoBruto = Number(entrada);
+    if(entrada.trim() === "" || !Number.isInteger(pesoBruto) || pesoBruto <= 0){
+        alert("El peso bruto debe ser un numero entero mayor a 0");
+        return;
+    }
+
+    try {
+        const respuesta = await fetch(`${API_URL}${id}/cerrar`, {
+            method: "PATCH",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({peso_bruto: pesoBruto})
+        });
+
+        if (!respuesta.ok) {
+            const error = await respuesta.json().catch(() => ({}));
+            const detalle = typeof error.detail === "string" ? error.detail: `Error ${respuesta.status}`;
+            alert (`No se pudo cerrar el ticket: ${detalle}`);
+
+            return;
+        }
+
+        await cargarHistorial();
+    } catch (error) {
+        console.error("Error al cerrar el ticket: ", error);
+        alert("No se pudo conectar con el servidor.");
+    }
+}
+
+function crearCeldaAcciones(ticket) {
+    const celda = document.createElement("td");
+
+    if (ticket.estado === "abierto") {
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "w3-tag w3-round w3-blue";   // mismo w3-tag que la etiqueta, bordes redondeados, azul
+        boton.style.border = "none";                   // los <button> traen borde propio
+        boton.style.cursor = "pointer";                // para que se note que es clickeable
+        boton.style.font = "inherit";                  // mismo tamaño de letra que la etiqueta
+        boton.textContent = "Cerrar";
+        boton.addEventListener("click", () => cerrarTicket(ticket.id));
+        celda.appendChild(boton);
+    }
+
+    return celda;
+}
+
 function formatoFecha(fecha) {
     return fecha.split("-").reverse().join("/") // 2026-11-07 -> 07/11/2026
 }
@@ -132,7 +183,8 @@ async function cargarHistorial(){
                 crearCelda(formatoPeso(t.peso_tara)),
                 crearCelda(formatoPeso(t.peso_bruto)),
                 crearCelda(formatoPeso(t.peso_neto)),
-                crearCeldaEstado(t.estado)
+                crearCeldaEstado(t.estado),
+                fila.appendChild(crearCeldaAcciones(t))
             );
             return fila;
         });
