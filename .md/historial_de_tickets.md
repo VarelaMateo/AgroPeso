@@ -315,4 +315,67 @@ Instalar dependencias: `pip install -r requirements.txt`.
 
 5. Opcional: pegar el token en jwt.io para ver su contenido.
 
-6. Ejecutar `pytest`. 
+6. Ejecutar `pytest`.
+
+---
+
+## AGROPESO-018: Middleware de seguridad y autorización
+
+La API ahora exige un token JWT válido y aplica reglas según el rol del usuario. Un cliente solo puede ver el historial de su propia empresa.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `middleware/security.py` | Nuevo: `get_current_user` y `exigir_admin` |
+| `models/user_model.py` | Nueva entidad `UsuarioActual` |
+| `services/auth_service.py` | Nueva función `decode_access_token` |
+| `routers/ticket_router.py` | Todos los endpoints exigen token; POST y PATCH solo admin |
+| `services/ticket_service.py` | Filtrado por rol en listado y en búsqueda por id |
+| `repository/ticket_repository.py` | `get_all_tickets` acepta `supplier_id` |
+
+### Cómo funciona
+
+1. El cliente envía el token en el encabezado `Authorization: Bearer <token>`.
+2. `get_current_user` (basada en `OAuth2PasswordBearer`) verifica la firma y el vencimiento, y devuelve un `UsuarioActual` con `username`, `rol` y `supplier_id`.
+3. Cada endpoint recibe ese usuario con `Depends(get_current_user)`.
+4. Las acciones de escritura llaman a `exigir_admin(user)` antes de hacer cualquier otra cosa.
+5. Las lecturas pasan el usuario al servicio, que decide qué datos corresponden.
+
+### Permisos por endpoint
+
+| Endpoint | Admin | Cliente | Sin token |
+|---|---|---|---|
+| `POST /tickets/` | ✅ | 403 | 401 |
+| `PATCH /tickets/{id}/cerrar` | ✅ | 403 | 401 |
+| `GET /tickets/` | Todos los tickets | Solo los de su proveedor | 401 |
+| `GET /tickets/{id}` | Cualquiera | Solo si es de su proveedor (si no, 404) | 401 |
+
+### Códigos de error
+
+- **401**: no se sabe quién es el usuario (sin token, token inválido, alterado o vencido).
+- **403**: el usuario está identificado pero no tiene permiso para la acción.
+- **404**: un cliente pide un ticket de otro proveedor; se responde igual que si no existiera para no revelar su existencia.
+
+### Decisiones técnicas
+
+- **Falla cerrado**: un cliente sin `supplier_id` recibe lista vacía en lugar de ver todo.
+- **Control de acceso por id**: no alcanza con filtrar la lista; `GET /tickets/{id}` también valida que el ticket sea del proveedor del cliente.
+- **`UsuarioActual` como entidad propia**: el servicio no depende de FastAPI y se puede probar con usuarios armados a mano.
+- **Autorización antes de la lógica**: `exigir_admin` es lo primero que ejecuta cada endpoint de escritura.
+- **Servicio separado**: `obtener_ticket` queda como búsqueda interna (la usa `cerrar_ticket`) y `obtener_ticket_de_usuario` aplica la regla de visibilidad.
+
+### Cómo probarlo
+
+1. Reiniciar uvicorn y abrir `/docs`: aparece el botón **Authorize**.
+2. Sin token, `GET /tickets/` debe responder 401.
+3. Autenticarse como admin: se pueden crear, cerrar y listar todos los tickets.
+4. Crear un usuario cliente asociado a un proveedor y autenticarse con él: debe ver solo sus tickets; `POST` y `PATCH` deben dar 403, y pedir un ticket de otro proveedor debe dar 404.
+5. Un token alterado o vencido debe responder 401.
+6. Ejecutar `pytest`.
+
+### Pendientes conocidos
+
+- El frontend aún no envía el token ni tiene pantalla de login, por lo que la página recibe 401 hasta ese ticket.
+- `GET /suppliers/` y `POST /suppliers/` todavía no están protegidos.
+- Tests de los endpoints con `TestClient` para verificar automáticamente los 401/403.
