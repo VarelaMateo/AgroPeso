@@ -2,54 +2,65 @@
 
 Este documento registra los Sprints y tareas completadas en la evolución del proyecto.
 
+---
 ### AGROPESO-001: Configuración de la conexión a MySQL
 * Se configuró SQLAlchemy (`engine`, `SessionLocal`, `Base`).
 * Implementación de variables de entorno `.env` con `python-dotenv`.
 * Driver utilizado: `PyMySQL`.
 
+---
 ### AGROPESO-002: Entidad pura `Ticket` y modelo `TicketDB`
 * Creación de `Ticket` (Entidad Pura con `@dataclass`) aislada del ORM.
 * Creación de `TicketDB` (Modelo SQLAlchemy).
 * Se eliminó el modelo provisorio `Pesada`.
 
+---
 ### AGROPESO-003: Repositorio de tickets (Patrón Repository)
 * Implementación de `TicketRepository` aislando la capa de datos.
 * Métodos implementados: `create_ticket`, `get_ticket_by_id`.
 * Conversiones `_to_db` y `_to_entity` encapsuladas para proteger las capas superiores.
 
+---
 ### AGROPESO-004: Servicio de tickets (Capa de negocio)
 * Implementación de `TicketService`.
 * Inyección de dependencias (`TicketRepository`).
 * Reglas de negocio: el peso bruto debe ser mayor a la tara.
 * Creación de excepciones propias (`ReglaNegocioError`, `TicketNoEncontradoError`).
 
+---
 ### AGROPESO-005: Esquemas de la API (Pydantic)
 * Implementación de validaciones de entrada (`TicketCreate`) y salida (`TicketResponse`).
 * Separación de responsabilidades: Pydantic valida formato, el Service valida negocio.
 
+---
 ### AGROPESO-006: Endpoints de FastAPI
 * Creación de `ticket_router.py` (`APIRouter`).
 * Inyección de sesión de BD mediante `Depends(get_db)`.
 * Manejo de códigos HTTP basado en excepciones del servicio.
 
+---
 ### AGROPESO-007: Punto de entrada de la aplicación
 * Configuración de `main.py` (FastAPI).
 * Configuración de `CORSMiddleware` inyectando orígenes desde `.env` (`CORS_ORIGINS`).
 
+---
 ### AGROPESO-008: Interfaz de usuario HTML
 * Maquetado en `frontend/html/index.html` usando `W3.CSS`.
 * Validaciones nativas alineadas con los esquemas de Pydantic.
 
+---
 ### AGROPESO-009: Conexión Frontend-Backend (JavaScript)
 * Script `app.js` utilizando `Fetch API`.
 * Intercepción del formulario, armado del JSON, y parseo de respuestas HTTP.
 * Prevención de doble envío y manejo unificado de errores (400, 422, 500).
 
+---
 ### AGROPESO-010: Listado y Flujo de Estados (Abiertos/Cerrados)
 * Incorporación de la enumeración `EstadoTicket`.
 * Endpoints para listar (`GET`) y cerrar (`PATCH`) tickets.
 * Lógica modificada para admitir tickets sin `peso_bruto` en su creación inicial.
 
+---
 ### AGROPESO-012: Interfaz del historial (HTML + JS)
 
 Se agregó a la interfaz web una tabla con los tickets registrados, que consume el endpoint `GET /tickets/`.
@@ -112,6 +123,7 @@ Los tickets se muestran del más reciente al más antiguo, que es el orden en qu
 - Desde la interfaz todavía no se puede cerrar un ticket abierto (el endpoint `PATCH /tickets/{ticket_id}` ya existe, falta la pantalla).
 - No hay tests automáticos del router ni del frontend, y un error de nombres como el de `obtener_todos_los_tickets` solo se detectó al probar a mano.
 
+---
 ## AGROPESO-014: Desplegable dinámico de proveedores
 
 El campo **Proveedor** del formulario dejó de tener opciones escritas a mano en el HTML: ahora se llena solo con los proveedores que existen en la base de datos.
@@ -148,6 +160,7 @@ El campo **Proveedor** del formulario dejó de tener opciones escritas a mano en
 4. Crear un proveedor nuevo desde `/docs` (`POST /suppliers/`), recargar la página y comprobar que aparece en la lista.
 5. Apagar el backend y recargar: debe aparecer "No se pudieron cargar los proveedores".
 
+---
 ## AGROPESO-015: Interfaz de cierre de ticket (frontend)
 
 El operador ya puede cerrar un ticket abierto desde la tabla del historial, registrando el peso bruto (segunda pesada) sin usar Swagger.
@@ -187,6 +200,7 @@ El operador ya puede cerrar un ticket abierto desde la tabla del historial, regi
 4. Cancelar el prompt o ingresar texto: no debe cambiar nada.
 5. Verificar que los tickets cerrados no muestran el botón.
 
+---
 ## AGROPESO-016: Modelo de usuario y repositorio (backend)
 
 Se creó la base para el login y los roles: la tabla de usuarios, sus schemas y el repositorio. Todavía no hay endpoints ni hash de contraseñas; eso se agrega en los próximos tickets.
@@ -231,3 +245,74 @@ Se valida en `UserCreate` con un `model_validator`; si se viola, la API responde
 
 1. Ejecutar `python create_table.py` desde `backend/` para crear la tabla `users`.
 2. Ejecutar `pytest`: deben pasar todos los tests, incluidos los 6 de `test_users.py`.
+   
+---
+## AGROPESO-017: Servicio de autenticación y generación de token (JWT)
+
+Se implementó el inicio de sesión: la contraseña se guarda cifrada y, al hacer login con credenciales válidas, el backend emite un token JWT. En este ticket solo se **emite** el token; todavía no se usa para proteger rutas.
+
+### Archivos
+
+| Archivo | Contenido |
+
+|---|---|
+
+| `services/auth_service.py` | Hash de contraseñas, creación del token y autenticación |
+
+| `routers/auth_router.py` | Endpoint `POST /auth/login` |
+
+| `crear_admin.py` | Script para crear un usuario admin desde la terminal |
+
+| `tests/test_auth.py` | Tests del servicio de autenticación |
+
+### Funciones del servicio
+
+| Función | Qué hace |
+
+|---|---|
+
+| `get_password_hash(password)` | Devuelve el hash bcrypt de la contraseña |
+
+| `verify_password(plain, hashed)` | Comprueba si una contraseña coincide con su hash |
+
+| `create_access_token(data)` | Genera un JWT firmado con vencimiento |
+
+| `authenticate_user(repo, username, password)` | Devuelve el usuario o `None` si las credenciales no son válidas |
+
+### Endpoint `POST /auth/login`
+
+**Entrada**: formulario (`application/x-www-form-urlencoded`) con `username` y `password`, no JSON.
+**Respuesta 200**: `{"access_token": "...", "token_type": "bearer"}`
+**Respuesta 401**: `Usuario o contraseña incorrectos` (el mismo mensaje si el usuario no existe o la clave es errónea).
+
+### Contenido del token
+
+El payload incluye `username`, `rol`, `supplier_id` y `exp` (vencimiento). El JWT está **firmado, no cifrado**: cualquiera puede leer su contenido, por lo que no debe incluir datos sensibles. La firma garantiza que no puede modificarse sin la clave secreta.
+
+### Configuración (`backend/.env`)
+
+SECRET_KEY=<clave generada con: python -c “import secrets; print(secrets.token_hex(32))”>
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+
+La clave **no se sube al repositorio**. Al cambiar el `.env` hay que reiniciar uvicorn.
+
+### Decisiones técnicas
+
+**Hash de un solo sentido (bcrypt)**: no se puede recuperar la contraseña original; se compara con `verify_password`. La sal aleatoria hace que dos hashes de la misma contraseña sean distintos.
+**`bcrypt==4.0.1` fijado**: versiones más nuevas son incompatibles con `passlib`.
+**Mismo error para usuario y contraseña incorrectos**: evita revelar qué usuarios existen.
+**Clave leída del `.env`**: nunca escrita en el código.
+**Tests sin base de datos**: se usa un repositorio falso en memoria.
+
+### Cómo probarlo
+
+Instalar dependencias: `pip install -r requirements.txt`.
+2. Agregar `SECRET_KEY` al `.env` y reiniciar uvicorn.
+
+3. Crear un usuario: `python crear_admin.py` (desde `backend/`).
+
+4. En `/docs`, ejecutar `POST /auth/login` con ese usuario: debe devolver el token. Con una contraseña incorrecta, debe devolver 401.
+
+5. Opcional: pegar el token en jwt.io para ver su contenido.
+
+6. Ejecutar `pytest`. 
