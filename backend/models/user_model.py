@@ -31,3 +31,10 @@ class UserDB(Base):
     supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable= True)
 
     supplier = relationship("Supplier")
+
+@dataclass
+class UsuarioActual:
+    username: str
+    rol: Rol
+    supplier_id: Optional[int] = None
+    

@@ -5,7 +5,9 @@ import pytest
 from models.ticket_model import EstadoTicket, Ticket
 from services.ticket_service import TicketService
 from utils.exceptions import ReglaNegocioError, TicketNoEncontradoError
+from models.user_model import Rol, UsuarioActual
 
+ADMIN = UsuarioActual(username="admin_test", rol=Rol.ADMIN)
 
 class RepositorioEnMemoria:
     def __init__(self):
@@ -25,12 +27,17 @@ class RepositorioEnMemoria:
         self.tickets[ticket.id] = ticket
         return ticket
 
-    def get_all_tickets(self, estado=None):
-        return [t for t in self.tickets.values() if estado is None or t.estado == estado]
+    def get_all_tickets(self, estado=None, supplier_id=None):
+        tickets = list(self.tickets.values())   # usá cómo guardás los tickets
+        if estado is not None:
+            tickets = [t for t in tickets if t.estado == estado]
+        if supplier_id is not None:
+            tickets = [t for t in tickets if t.supplier_id == supplier_id]
+        return tickets
 
 
-def crear_ticket(tara, bruto):
-    return Ticket(date.today(), "Ivan Derio", "HKN279", tara, bruto, 1)
+def crear_ticket(tara, bruto, supplier_id=1):
+    return Ticket(date.today(), "Ivan Derio", "HKN279", tara, bruto, supplier_id)
 
 
 @pytest.fixture
@@ -114,7 +121,7 @@ def test_obtener_ticket_inexistente_lanza_error(service):
 def test_obtener_todos_sin_filtro(service):
     service.registrar_pesada(crear_ticket(15160, None))
     service.registrar_pesada(crear_ticket(15160, 48260))
-    assert len(service.obtener_todos_los_tickets()) == 2
+    assert len(service.obtener_todos_los_tickets(ADMIN)) == 2
 
 
 def test_obtener_todos_filtra_por_estado(service):
@@ -122,9 +129,52 @@ def test_obtener_todos_filtra_por_estado(service):
     service.registrar_pesada(crear_ticket(15160, 48260))
     service.registrar_pesada(crear_ticket(14300, None))
 
-    abiertos = service.obtener_todos_los_tickets(EstadoTicket.ABIERTO)
-    cerrados = service.obtener_todos_los_tickets(EstadoTicket.CERRADO)
+    abiertos = service.obtener_todos_los_tickets(ADMIN, estado=EstadoTicket.ABIERTO)
+    cerrados = service.obtener_todos_los_tickets(ADMIN, estado=EstadoTicket.CERRADO)
 
     assert len(abiertos) == 2
     assert all(t.estado == EstadoTicket.ABIERTO for t in abiertos)
     assert len(cerrados) == 1
+
+ # --- Autorización por rol ---
+
+def test_cliente_solo_ve_tickets_de_su_proveedor(service):
+    service.registrar_pesada(crear_ticket(15160, None, supplier_id=1))
+    service.registrar_pesada(crear_ticket(15160, 48260, supplier_id=1))
+    service.registrar_pesada(crear_ticket(14300, None, supplier_id=2))
+
+    cliente = UsuarioActual(username="cliente_test", rol=Rol.CLIENTE, supplier_id=1)
+    tickets = service.obtener_todos_los_tickets(cliente)
+
+    assert len(tickets) == 2
+    assert all(t.supplier_id == 1 for t in tickets)
+
+
+def test_admin_ve_tickets_de_todos_los_proveedores(service):
+    service.registrar_pesada(crear_ticket(15160, None, supplier_id=1))
+    service.registrar_pesada(crear_ticket(14300, None, supplier_id=2))
+    assert len(service.obtener_todos_los_tickets(ADMIN)) == 2
+
+
+def test_cliente_sin_proveedor_no_ve_nada(service):
+    service.registrar_pesada(crear_ticket(15160, None, supplier_id=1))
+    sin_proveedor = UsuarioActual(username="cliente_test", rol=Rol.CLIENTE, supplier_id=None)
+    assert service.obtener_todos_los_tickets(sin_proveedor) == []
+
+
+def test_cliente_puede_ver_su_propio_ticket_por_id(service):
+    ticket = service.registrar_pesada(crear_ticket(15160, None, supplier_id=1))
+    cliente = UsuarioActual(username="cliente_test", rol=Rol.CLIENTE, supplier_id=1)
+    assert service.obtener_ticket_de_usuario(ticket.id, cliente).id == ticket.id
+
+
+def test_cliente_no_puede_ver_ticket_de_otro_proveedor(service):
+    ajeno = service.registrar_pesada(crear_ticket(15160, None, supplier_id=2))
+    cliente = UsuarioActual(username="cliente_test", rol=Rol.CLIENTE, supplier_id=1)
+    with pytest.raises(TicketNoEncontradoError):
+        service.obtener_ticket_de_usuario(ajeno.id, cliente)
+
+
+def test_admin_puede_ver_cualquier_ticket_por_id(service):
+    ticket = service.registrar_pesada(crear_ticket(15160, None, supplier_id=2))
+    assert service.obtener_ticket_de_usuario(ticket.id, ADMIN).id == ticket.id
