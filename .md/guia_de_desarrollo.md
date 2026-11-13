@@ -48,6 +48,16 @@ UPDATE tickets SET estado = 'cerrado' WHERE peso_bruto IS NOT NULL;"
 
 ---
 
+---
+
+## Seguridad y Variables de Entorno Adicionales (`backend/.env`)
+
+Para la firma de tokens JWT, el archivo `.env` requiere las siguientes variables (nunca deben subirse al repositorio):
+
+```env
+SECRET_KEY=<clave generada con: python -c "import secrets; print(secrets.token_hex(32))">
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+
 ## Tests
 Los tests están construidos con `pytest` y se ejecutan desde la carpeta `backend/`:
 ```bash
