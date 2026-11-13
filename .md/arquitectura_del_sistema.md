@@ -56,8 +56,8 @@ Este mismo patrón exacto se utiliza para el sistema de seguridad y roles de usu
 
 ---
 
-### Flujo completo de una petición
+### Flujo completo de una petición autenticada
 
 ```text
-HTTP  →  Router (esquemas)  →  TicketService (reglas)  →  TicketRepository  →  MySQL
+HTTP (Bearer Token) → Middleware (get_current_user) → Router (esquemas + exigir_admin) → TicketService (reglas + filtro por UsuarioActual) → TicketRepository → MySQL
 ```
