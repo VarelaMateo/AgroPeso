@@ -37,3 +37,6 @@ def authenticate_user(repo, username: str, password:str) -> Optional[User]:
         return None
     return user
 
+def decode_access_token(token: str) -> dict:
+    #verifica la firma y el vencimiento. Lanza jwt.PyJWTError si el token no es valido
+    return jwt.decode(token, _secret_key(), algorithms=[ALGORITHM])

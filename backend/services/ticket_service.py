@@ -2,6 +2,7 @@ from typing import Optional
 
 from repository.ticket_repository import TicketRepository
 from models.ticket_model import EstadoTicket, Ticket
+from models.user_model import Rol
 from utils.exceptions import ReglaNegocioError, TicketNoEncontradoError 
 
 
@@ -39,8 +40,18 @@ class TicketService:
             raise TicketNoEncontradoError(f"No existe el ticket con id {ticket_id}")     
         return ticket_encontrado
 
-    def obtener_todos_los_tickets (self, estado: Optional[EstadoTicket] = None) -> list[Ticket]:
-        return self.repository.get_all_tickets(estado)
+    def obtener_ticket_de_usuario(self, ticket_id: int, user) -> Ticket:
+        ticket = self.obtener_ticket(ticket_id)
+        if user.rol == Rol.CLIENTE and ticket.supplier_id != user.supplier_id:
+            raise TicketNoEncontradoError(f"No existe el ticket von id {ticket_id}")
+        return ticket
+    
+    def obtener_todos_los_tickets (self, user, estado: Optional[EstadoTicket] = None) -> list[Ticket]:
+        if user.rol == Rol.CLIENTE:
+            if user.supplier_id is None:
+                return[] #Un cliente sin proveedor no debe nada
+            return self.repository.get_all_tickets(estado = estado, supplier_id = user.supplier_id)
+        return self.repository.get_all_tickets(estado = estado)
 
     def validar_pesos (self, peso_tara: int, peso_bruto: int) -> None:
         if peso_tara >= peso_bruto:

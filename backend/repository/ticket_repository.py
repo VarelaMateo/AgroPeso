@@ -20,12 +20,13 @@ class TicketRepository:
             return None
         return self._to_entity(ticket_db)
 
-    def get_all_tickets(self, estado: Optional[EstadoTicket] = None) -> list[Ticket]:
+    def get_all_tickets(self, estado: Optional[EstadoTicket] = None, supplier_id = None) -> list[Ticket]:
         consulta = select(TicketDB).order_by(TicketDB.fecha.desc(), TicketDB.id.desc())
         if estado is not None:
             consulta = consulta.where(TicketDB.estado == estado.value)
-        ticket_db = self.session.scalars(consulta).all()
-        return [self._to_entity(t) for t in ticket_db]
+        if supplier_id is not None:
+            consulta = consulta.where(TicketDB.supplier_id == supplier_id) 
+        return [self._to_entity(t) for t in self.session.scalars(consulta).all()]
 
     def update_ticket(self, ticket: Ticket) -> Optional[Ticket]:
         ticket_db = self.session.get(TicketDB, ticket.id)
