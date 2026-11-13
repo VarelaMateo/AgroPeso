@@ -54,6 +54,22 @@
 | **500** | Error interno (ej: `supplier_id` inexistente rechazada por MySQL). |
 
 ---
+#### Autorización y Permisos en Tickets
+
+Todos los endpoints de `/tickets` requieren enviar el token JWT en el encabezado `Authorization: Bearer <token>`.
+
+| Endpoint | Admin | Cliente | Sin token |
+|---|---|---|---|
+| `POST /tickets/` | Permitido | 403 Forbidden | 401 Unauthorized |
+| `PATCH /tickets/{id}/cerrar` | Permitido | 403 Forbidden | 401 Unauthorized |
+| `GET /tickets/` | Todos los tickets | Solo los de su `supplier_id` | 401 Unauthorized |
+| `GET /tickets/{id}` | Cualquier ticket | Solo si pertenece a su `supplier_id` (si no, 404) | 401 Unauthorized |
+
+**Códigos de seguridad adicionales:**
+- **401 Unauthorized:** No se envió token, o el token es inválido, fue alterado o está vencido.
+- **403 Forbidden:** El usuario está autenticado como `cliente` e intenta realizar una operación exclusiva de `admin`.
+- **404 Not Found (por visibilidad):** Si un cliente consulta por ID un ticket de otro proveedor, se devuelve 404 para no revelar que ese registro existe.
+---
 
 ## Ejemplos de Solicitudes
 
