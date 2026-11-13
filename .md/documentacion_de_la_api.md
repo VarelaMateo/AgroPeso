@@ -87,6 +87,27 @@
 | GET | `/suppliers/` | Lista los proveedores, ordenados por nombre | `list[SupplierResponse]` (200) |
 | POST | `/suppliers/` | Crea un proveedor | `SupplierResponse` (201) |
 
+---
+
+## Autenticación (Auth)
+
+#### Endpoints
+
+| Método | Ruta | Descripción | Entrada | Respuesta |
+|---|---|---|---|---|
+| POST | `/auth/login` | Inicia sesión y emite un token JWT | `application/x-www-form-urlencoded` (`username`, `password`) | `{"access_token": "...", "token_type": "bearer"}` (200) |
+
+#### Detalles del Token y Respuestas
+
+- **Formato de entrada:** Recibe datos de formulario (`OAuth2PasswordRequestForm`), no JSON.
+- **Contenido del JWT (Payload):** Incluye `username`, `rol`, `supplier_id` y `exp` (vencimiento). El token está firmado pero no cifrado, por lo que no contiene datos sensibles.
+
+| Código | Cuándo ocurre |
+|---|---|
+| 200 | Credenciales válidas; devuelve el `access_token` |
+| 401 | `Usuario o contraseña incorrectos` (mismo mensaje para usuario inexistente o clave errónea por seguridad) |
+| 422 | Faltan los campos `username` o `password` en el formulario |
+
 #### Esquemas
 
 | Esquema | Campo | Tipo | Regla |
