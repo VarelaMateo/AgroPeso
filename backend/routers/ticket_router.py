@@ -40,7 +40,7 @@ def obtener_ticket(ticket_id: int, db: Session = Depends(get_db), user: UsuarioA
     service = TicketService(repository)
 
     try:
-        return service.obtener_ticket(ticket_id, user)
+        return service.obtener_ticket_de_usuario(ticket_id, user)
     except TicketNoEncontradoError as e:
         raise HTTPException(status_code = 404, detail = str(e))
 

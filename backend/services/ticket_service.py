@@ -43,7 +43,7 @@ class TicketService:
     def obtener_ticket_de_usuario(self, ticket_id: int, user) -> Ticket:
         ticket = self.obtener_ticket(ticket_id)
         if user.rol == Rol.CLIENTE and ticket.supplier_id != user.supplier_id:
-            raise TicketNoEncontradoError(f"No existe el ticket von id {ticket_id}")
+            raise TicketNoEncontradoError(f"No existe el ticket con id {ticket_id}")
         return ticket
     
     def obtener_todos_los_tickets (self, user, estado: Optional[EstadoTicket] = None) -> list[Ticket]:

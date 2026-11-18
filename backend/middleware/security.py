@@ -15,7 +15,7 @@ def  get_current_user(token: str = Depends(oauth2_scheme)) -> UsuarioActual:
             rol = Rol(datos["rol"]),
             supplier_id = datos.get("supplier_id")
         )
-    except (jwt.PyJWKError, KeyError, ValueError):
+    except (jwt.PyJWTError, KeyError, ValueError):
         raise HTTPException(
             status_code = status.HTTP_401_UNAUTHORIZED,
             detail = "Token invalido o vencido",
