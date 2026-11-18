@@ -14,7 +14,7 @@ def listar_proveedores(db: Session = Depends(get_db)):
     service = SupplierService(SupplierRepository(db))
     return service.obtener_todos_los_proveedores()
 
-@router.post("/",  response_model = SupplierResponse, status_code = 200)
+@router.post("/",  response_model = SupplierResponse, status_code = 201)
 def crear_proveedor(datos: SupplierCreate, db: Session = Depends(get_db)):
     service = SupplierService(SupplierRepository(db))
     proveedor = SupplierEntity(**datos.model_dump()) #esquema -> entidad pura

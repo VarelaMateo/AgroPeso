@@ -153,7 +153,7 @@ function mostrarFilaUnica(text) {
     const fila = document.createElement("tr");
     const celda = document.createElement("td");
 
-    celda.colSpan = 9;
+    celda.colSpan = 10;
     celda.className = "w3-center";
     celda.textContent = text;
 
@@ -186,7 +186,8 @@ async function cargarHistorial(){
                 crearCelda(formatoPeso(t.peso_bruto)),
                 crearCelda(formatoPeso(t.peso_neto)),
                 crearCeldaEstado(t.estado),
-                fila.appendChild(crearCeldaAcciones(t))
+                crearCeldaEstado(t.estado),
+                crearCeldaAcciones(t)
             );
             return fila;
         });
@@ -208,7 +209,7 @@ function crearOpcion(valor, texto, esPlaceholder = false) {
     opcion.value = valor;
     opcion.textContent = texto;
     if (esPlaceholder) {
-        opcion.disable = true;
+        opcion.disabled = true;
         opcion.defaultSelected = true; //para que form.reset() vuelve a esta opcion 
     }
     return opcion;
