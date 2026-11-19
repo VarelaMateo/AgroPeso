@@ -11,6 +11,25 @@
 
 ---
 
+---
+
+## Entorno local en Windows (Visual Studio Code)
+
+Desde la raíz del proyecto, en PowerShell:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+* **Base de datos**: verificar el servicio con `Get-Service | Where-Object { $_.Name -match "mysql|maria" }` y, si está detenido, iniciarlo con `net start MariaDB` (o `MySQL80`) desde una terminal de administrador.
+* **Backend**: `cd backend` y `uvicorn main:app --reload`.
+* **Frontend**: en otra terminal, `cd frontend` y `python -m http.server 5500`.
+* **CORS**: si se abre el front con `127.0.0.1`, incluir ambos orígenes en el `.env`: `CORS_ORIGINS=http://localhost:5500,http://127.0.0.1:5500`.
+
+---
+
 ## Ejecución del Proyecto
 
 ### 1. Levantar el Backend (API)
@@ -57,6 +76,9 @@ Para la firma de tokens JWT, el archivo `.env` requiere las siguientes variables
 ```env
 SECRET_KEY=<clave generada con: python -c "import secrets; print(secrets.token_hex(32))">
 ACCESS_TOKEN_EXPIRE_MINUTES=60
+```
+
+---
 
 ## Tests
 Los tests están construidos con `pytest` y se ejecutan desde la carpeta `backend/`:
@@ -65,4 +87,5 @@ pytest
 ```
 * `test_schemas.py`: Valida los esquemas de Pydantic.
 * `test_server.py`: Valida las reglas de negocio en memoria.
+* `test_endpoints.py`: Verifica los 401 (sin token o token inválido) y los 403 (cliente intentando escribir) usando `TestClient`; no necesita base de datos.
 * `test_repository.py`: Prueba contra la base real. Requiere MariaDB encendido; usa fixtures para deshacer los cambios (no deja basura en la BD).
