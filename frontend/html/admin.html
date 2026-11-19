@@ -5,77 +5,159 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AgroPeso - Panel del administrador</title>
   <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* Único CSS propio: lo que W3.CSS no puede hacer */
+    body { font-family: "Poppins", sans-serif; }
+    h1, h2, h3, h4, h5, h6, button, input, select { font-family: inherit; }
+
+    /* Barra superior */
+    .barra-superior { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 16px 24px; }
+    .barra-superior .btn-salir { margin-left: auto; }
+    .buscador-caja { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 220px; max-width: 480px; padding: 6px 14px; }
+    .punto { width: 22px; height: 22px; flex: none; }
+
+    /* Panel principal: tres columnas del mismo alto que llenan la pantalla */
+    .panel-principal {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      align-items: stretch;
+      padding: 8px 24px 24px;
+      min-height: calc(100vh - 100px);
+    }
+    .col { display: flex; flex-direction: column; }
+    .col-form, .col-centro { flex: 1 1 300px; }
+    .col-tabla { flex: 2 1 480px; min-width: 0; }
+
+    /* Columna izquierda: formulario centrado y repartido en toda la altura */
+    .tarjeta-brillo {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      gap: 14px;
+      padding: 24px 8%;
+      background:
+        radial-gradient(circle at 100% 100%, rgba(139, 195, 74, 0.6) 0%, rgba(139, 195, 74, 0) 55%),
+        #f1f1f1;
+    }
+    .tarjeta-brillo > * { width: 100%; max-width: 360px; margin: 0 auto; }
+    .tarjeta-brillo p { margin: 0; }
+
+    /* Columna central: acciones y estadísticas con más aire */
+    .col-centro { gap: 24px; }
+    .grupo-acciones { display: flex; flex-direction: column; gap: 18px; }
+    .grupo-acciones h2 { margin: 0 0 4px; }
+    .btn-accion { display: flex; align-items: center; justify-content: space-between; width: 100%; padding-top: 14px; padding-bottom: 14px; }
+    .flecha { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+    .tarjeta-stat { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+    /* Columna derecha: la caja punteada ocupa el resto de la altura */
+    .caja-punteada { flex: 1; border: 1px dashed #777; }
+    .titulo-tabla { text-transform: uppercase; letter-spacing: 0.5px; }
+  </style>
 </head>
-<body class="w3-light-grey">
+<body class="w3-white">
 
   <!-- Barra superior -->
-  <header class="w3-bar w3-green w3-padding">
-    <span class="w3-bar-item w3-xlarge"><b>AgroPeso</b> · Administrador</span>
-    <button id="btn-logout" type="button" class="w3-bar-item w3-button w3-round w3-right w3-white">
-      Cerrar sesión (<span id="nombre-usuario"></span>)
+  <header class="barra-superior">
+    <div>
+      <span class="w3-small w3-text-grey">Hola</span><br>
+      <b id="nombre-usuario" style="text-transform: capitalize;"></b>
+    </div>
+
+    <div class="buscador-caja w3-light-grey w3-round-xxlarge">
+      <span class="w3-circle w3-light-green punto"></span>
+      <input id="buscador" class="w3-input w3-border-0 w3-transparent" type="search"
+             placeholder="Buscar por proveedor o patente (abiertos y cerrados)" aria-label="Buscar tickets">
+    </div>
+
+    <button id="btn-logout" type="button" class="btn-salir w3-button w3-light-green w3-round-xxlarge">
+      Cerrar sesión
     </button>
   </header>
 
-  <!-- Buscador a lo ancho -->
-  <div class="w3-container w3-padding-16">
-    <input id="buscador" class="w3-input w3-border w3-round-xxlarge" type="search"
-           placeholder="Buscar tickets (abiertos o cerrados) por proveedor o patente...">
-  </div>
-
-  <main class="w3-row-padding w3-padding-bottom-32">
+  <main class="panel-principal">
 
     <!-- Columna izquierda: Nuevo ticket -->
-    <section class="w3-col l3 m12 w3-margin-bottom">
-      <form id="form-pesaje" class="w3-card-4 w3-white w3-container w3-padding-16">
-        <h3 class="w3-center">Nuevo ticket</h3>
+    <section class="col col-form">
+      <form id="form-pesaje" class="tarjeta-brillo w3-round-xlarge">
+        <h4 class="w3-center w3-text-light-green"><b>NUEVO TICKET</b></h4>
 
         <p>
-          <label for="chofer">Chofer</label>
-          <input class="w3-input w3-border" type="text" id="chofer" name="chofer" maxlength="200" required>
+          <label for="chofer" class="w3-text-grey">Chofer</label>
+          <input class="w3-input w3-border w3-border-black w3-round-xxlarge w3-white w3-padding"
+                 type="text" id="chofer" name="chofer" maxlength="200" required>
         </p>
         <p>
-          <label for="patente">Patente</label>
-          <input class="w3-input w3-border" type="text" id="patente" name="patente" maxlength="11" placeholder="Ej: HKN279">
+          <label for="patente" class="w3-text-grey">Patente</label>
+          <input class="w3-input w3-border w3-border-black w3-round-xxlarge w3-white w3-padding"
+                 type="text" id="patente" name="patente" maxlength="11" placeholder="Ej: HKN279">
         </p>
         <p>
-          <label for="peso_tara">Peso tara (kg)</label>
-          <input class="w3-input w3-border" type="number" id="peso_tara" name="peso_tara" min="1" step="1" required>
+          <label for="peso_tara" class="w3-text-grey">Peso tara (kg)</label>
+          <input class="w3-input w3-border w3-border-black w3-round-xxlarge w3-white w3-padding"
+                 type="number" id="peso_tara" name="peso_tara" min="1" step="1" required>
         </p>
         <p>
-          <label for="peso_bruto">Peso bruto (kg) <small>(opcional)</small></label>
-          <input class="w3-input w3-border" type="number" id="peso_bruto" name="peso_bruto" min="1" step="1">
+          <label for="peso_bruto" class="w3-text-grey">Peso bruto (kg) <small>(opcional)</small></label>
+          <input class="w3-input w3-border w3-border-black w3-round-xxlarge w3-white w3-padding"
+                 type="number" id="peso_bruto" name="peso_bruto" min="1" step="1">
         </p>
         <p>
-          <label for="supplier_id">Proveedor</label>
-          <select class="w3-select w3-border" id="supplier_id" name="supplier_id" required>
+          <label for="supplier_id" class="w3-text-grey">Proveedor</label>
+          <select class="w3-select w3-border w3-border-black w3-round-xxlarge w3-white w3-padding"
+                  id="supplier_id" name="supplier_id" required>
             <option value="" disabled selected>Cargando proveedores...</option>
           </select>
         </p>
-        <p>
-          <button class="w3-button w3-green w3-block" type="submit">Registrar pesada</button>
+        <p class="w3-center">
+          <button class="w3-button w3-light-green w3-round-xxlarge w3-padding-large" type="submit" style="min-width: 70%;">
+            Registrar pesada
+          </button>
         </p>
-        <div id="mensaje" class="w3-panel" style="display: none;"></div>
+        <div id="mensaje" class="w3-panel w3-round" style="display: none;"></div>
       </form>
     </section>
 
-    <!-- Columna central: acciones rápidas -->
-    <section class="w3-col l2 m12 w3-margin-bottom">
-      <div class="w3-card-4 w3-white w3-container w3-padding-16">
-        <h3 class="w3-center">Acciones</h3>
-        <p><button id="btn-cerrar" type="button" class="w3-button w3-round-xxlarge w3-blue w3-block">Cerrar ticket</button></p>
-        <p><button id="btn-proveedor" type="button" class="w3-button w3-round-xxlarge w3-teal w3-block">Agregar proveedor</button></p>
-        <p><button id="btn-producto" type="button" class="w3-button w3-round-xxlarge w3-orange w3-block">Agregar producto</button></p>
+    <!-- Columna central: acciones y estadísticas -->
+    <section class="col col-centro">
+      <div class="grupo-acciones">
+        <h2><b>Acciones</b></h2>
+
+        <button id="btn-cerrar" type="button" class="btn-accion w3-button w3-green w3-round-xxlarge">
+          <b>Cerrar ticket</b><span class="flecha w3-circle w3-white w3-text-green">›</span>
+        </button>
+        <button id="btn-proveedor" type="button" class="btn-accion w3-button w3-green w3-round-xxlarge">
+          <b>Cargar proveedor</b><span class="flecha w3-circle w3-white w3-text-green">›</span>
+        </button>
+        <button id="btn-producto" type="button" class="btn-accion w3-button w3-green w3-round-xxlarge">
+          <b>Cargar producto</b><span class="flecha w3-circle w3-white w3-text-green">›</span>
+        </button>
+      </div>
+
+      <div class="tarjeta-stat w3-light-grey w3-round-xlarge w3-padding-large">
+        <b>Tickets totales del mes</b>
+        <p class="w3-xxlarge w3-center"><b id="stat-tickets-mes">—</b></p>
+      </div>
+
+      <div class="tarjeta-stat w3-light-grey w3-round-xlarge w3-padding-large">
+        <b>Proveedores con más tickets</b>
+        <p class="w3-small w3-text-grey" style="margin-top: 0;">Este mes</p>
+        <div id="lista-top-proveedores"></div>
       </div>
     </section>
 
     <!-- Columna derecha: tabla -->
-    <section class="w3-col l7 m12 w3-margin-bottom">
-      <div class="w3-card-4 w3-white w3-container w3-padding-16">
-        <h3 id="titulo-tabla" class="w3-center">Lista de tickets abiertos de hoy</h3>
+    <section class="col col-tabla">
+      <h4 id="titulo-tabla" class="titulo-tabla w3-center">Lista de tickets abiertos de hoy</h4>
+      <div class="caja-punteada w3-round-xlarge w3-padding">
         <div class="w3-responsive">
-          <table class="w3-table-all w3-hoverable w3-small">
+          <table class="w3-table w3-bordered w3-hoverable w3-small">
             <thead>
-              <tr class="w3-green">
+              <tr class="w3-text-green">
                 <th>ID</th>
                 <th>Fecha</th>
                 <th>Chofer</th>
@@ -97,28 +179,29 @@
     </section>
 
   </main>
-    <!-- Modal reutilizable (reemplaza prompt y alert) -->
-    <div id="modal" class="w3-modal">
-        <div class="w3-modal-content w3-card-4 w3-animate-top" style="max-width: 420px;">
-        <header class="w3-container w3-green">
-            <h3 id="modal-titulo"></h3>
-        </header>
-        <form id="modal-form" class="w3-container w3-padding-16">
-            <p id="modal-texto"></p>
-            <p id="modal-campo">
-            <input id="modal-input" class="w3-input w3-border w3-round" autocomplete="off">
-            </p>
-            <p id="modal-error" class="w3-text-red w3-small" style="display: none;"></p>
-            <div class="w3-right">
-            <button type="button" id="modal-cancelar" class="w3-button w3-round w3-light-grey">Cancelar</button>
-            <button type="submit" id="modal-aceptar" class="w3-button w3-round w3-green">Aceptar</button>
-            </div>
-            <div class="w3-clear"></div>
-        </form>
-        </div>
-    </div>
 
-    <script src="../js/auth.js"></script>
-    <script src="../js/admin.js"></script>
+  <!-- Modal reutilizable (reemplaza prompt y alert) -->
+  <div id="modal" class="w3-modal">
+    <div class="w3-modal-content w3-card-4 w3-animate-top" style="max-width: 420px;">
+      <header class="w3-container w3-green">
+        <h3 id="modal-titulo"></h3>
+      </header>
+      <form id="modal-form" class="w3-container w3-padding-16">
+        <p id="modal-texto"></p>
+        <p id="modal-campo">
+          <input id="modal-input" class="w3-input w3-border w3-round" autocomplete="off">
+        </p>
+        <p id="modal-error" class="w3-text-red w3-small" style="display: none;"></p>
+        <div class="w3-right">
+          <button type="button" id="modal-cancelar" class="w3-button w3-round w3-light-grey">Cancelar</button>
+          <button type="submit" id="modal-aceptar" class="w3-button w3-round w3-green">Aceptar</button>
+        </div>
+        <div class="w3-clear"></div>
+      </form>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/admin.js"></script>
 </body>
 </html>

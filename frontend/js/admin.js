@@ -21,6 +21,8 @@ const tablaHistorial = document.getElementById("tabla-historial");
 const tituloTabla = document.getElementById("titulo-tabla");
 const buscador = document.getElementById("buscador");
 const selectProveedores = document.getElementById("supplier_id");
+const statTicketsMes = document.getElementById("stat-tickets-mes");
+const listaTopProveedores = document.getElementById("lista-top-proveedores");
 
 let todosLosTickets = [];
 let proveedoresPorId = {};
@@ -82,7 +84,7 @@ function crearCeldaAcciones(ticket) {
     if (ticket.estado === "abierto") {
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = "w3-button w3-small w3-round w3-blue";
+        btn.className = "w3-button w3-small w3-round-xxlarge w3-green";
         btn.textContent = "Cerrar";
         btn.addEventListener("click", () => cerrarTicket(ticket.id));
         celda.appendChild(btn);
@@ -224,11 +226,52 @@ function renderizarTabla() {
     tablaHistorial.replaceChildren(...filas);
 }
 
+// Estadísticas del mes (se calculan con la misma lista que ya trae la API)
+function renderizarEstadisticas() {
+    const mes = fechaDeHoy().slice(0, 7); // "YYYY-MM"
+    const delMes = todosLosTickets.filter((t) => t.fecha.slice(0, 7) === mes);
+
+    statTicketsMes.textContent = `${delMes.length} ${delMes.length === 1 ? "ticket" : "tickets"}`;
+
+    const conteo = {};
+    for (const t of delMes) conteo[t.supplier_id] = (conteo[t.supplier_id] ?? 0) + 1;
+
+    const top = Object.entries(conteo)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+
+    if (top.length === 0) {
+        const vacio = document.createElement("p");
+        vacio.className = "w3-text-grey w3-small";
+        vacio.textContent = "Sin tickets este mes";
+        listaTopProveedores.replaceChildren(vacio);
+        return;
+    }
+
+    const filas = top.map(([supplierId, cantidad]) => {
+        const fila = document.createElement("div");
+        fila.className = "w3-row w3-margin-bottom";
+
+        const nombre = document.createElement("span");
+        nombre.className = "w3-col s9 w3-text-grey";
+        nombre.textContent = proveedoresPorId[supplierId] ?? `Proveedor ${supplierId}`;
+
+        const total = document.createElement("span");
+        total.className = "w3-col s3 w3-right-align";
+        total.textContent = cantidad;
+
+        fila.append(nombre, total);
+        return fila;
+    });
+    listaTopProveedores.replaceChildren(...filas);
+}
+
 async function cargarTickets() {
     try {
         const respuesta = await fetchConToken(API_TICKETS);
         if (!respuesta.ok) throw new Error(`Error ${respuesta.status}`);
         todosLosTickets = await  respuesta.json();
+        renderizarEstadisticas();
         renderizarTabla();
     } catch(error) {
         console.error("Error al cargar los tickets: ", error);
