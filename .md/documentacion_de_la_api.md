@@ -103,6 +103,13 @@ Todos los endpoints de `/tickets` requieren enviar el token JWT en el encabezado
 | GET | `/suppliers/` | Lista los proveedores, ordenados por nombre | `list[SupplierResponse]` (200) |
 | POST | `/suppliers/` | Crea un proveedor | `SupplierResponse` (201) |
 
+#### Autorización y Permisos en Proveedores
+
+| Endpoint | Admin | Cliente | Sin token |
+|---|---|---|---|
+| `GET /suppliers/` | ✅ | ✅ | 401 |
+| `POST /suppliers/` | ✅ | 403 | 401 |
+
 ---
 
 ## Autenticación (Auth)
