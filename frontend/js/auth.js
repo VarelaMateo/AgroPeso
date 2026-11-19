@@ -83,7 +83,7 @@ if (formLogin) {
     const boton = formLogin.querySelector("button[type='submit']");
 
     function mostrarError(text){
-        mensaje.textContent = texto;
+        mensaje.textContent = text;
         mensaje.style.display = "block";
     }
 
@@ -125,7 +125,7 @@ if (formLogin) {
             }
 
             const datos = await respuesta.json();
-            const rol = decodificarPayload(datos.access_token)?.rol;
+            const rol = decodificarPayLoad(datos.access_token)?.rol;
             const destino = paginaSegunRol(rol);
 
             if (!destino) {
