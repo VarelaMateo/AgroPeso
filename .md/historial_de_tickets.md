@@ -379,3 +379,100 @@ La API ahora exige un token JWT válido y aplica reglas según el rol del usuari
 - El frontend aún no envía el token ni tiene pantalla de login, por lo que la página recibe 401 hasta ese ticket.
 - `GET /suppliers/` y `POST /suppliers/` todavía no están protegidos.
 - Tests de los endpoints con `TestClient` para verificar automáticamente los 401/403.
+
+
+---
+
+## AGROPESO-019: Pantalla de login y sesión en el frontend
+
+El frontend ahora tiene pantalla de inicio de sesión. Guarda el token JWT, redirige según el rol y envía el token en cada petición. Además, la API de proveedores quedó protegida.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `frontend/html/login.html` | Nuevo: formulario de usuario y contraseña |
+| `frontend/js/auth.js` | Nuevo: manejo de sesión compartido por todas las pantallas |
+| `routers/supplier_router.py` | `GET` exige token; `POST` solo admin |
+| `crear_cliente.py` | Script para crear usuarios con rol cliente asociados a un proveedor |
+
+### Cómo funciona
+
+1. `login.html` envía `username` y `password` a `POST /auth/login` como formulario (`application/x-www-form-urlencoded`).
+2. Si la respuesta es 200, `auth.js` lee el `rol` del token, lo guarda en `localStorage` con la clave `access_token` y redirige: `admin` → `admin.html`, `cliente` → `cliente.html`.
+3. Si es 401, muestra "Usuario o contraseña incorrectos" y si el rol es desconocido no guarda el token.
+4. `fetchConToken(url, opciones)` agrega el encabezado `Authorization: Bearer <token>` a cada petición. Si no hay token o la API responde 401, borra la sesión y vuelve al login.
+
+### Decisiones técnicas
+
+- **Un solo archivo de sesión**: `auth.js` concentra la clave del token, la lectura del payload y las peticiones autenticadas, para que todas las pantallas usen lo mismo.
+- **Redirección por rol**: la tabla `PAGINAS_POR_ROL` define el destino de cada rol; sumar un rol es agregar una línea.
+- **Sin `innerHTML`**: los mensajes de error se asignan con `textContent`.
+- **El frontend no decide permisos**: leer el rol del token sirve solo para elegir la pantalla; la autorización real la hace el backend.
+
+### Cómo probarlo
+
+1. Abrir `http://localhost:5500/html/login.html` con la API encendida.
+2. Con credenciales incorrectas aparece el mensaje en rojo.
+3. Con un admin se redirige a `admin.html`.
+4. Con el servidor apagado aparece "No se pudo conectar con el servidor".
+
+### Pendientes conocidos
+
+- `cliente.html` todavía no existe: un login de cliente redirige a una página inexistente hasta el ticket de la vista de cliente.
+
+---
+
+## AGROPESO-020: Dashboard del administrador
+
+La vista operativa se transformó en el panel de control del administrador, con guardia de rol, buscador, alta de tickets, acciones rápidas y lista de tickets abiertos de hoy.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `frontend/html/admin.html` | Nuevo: panel en tres columnas y modal reutilizable |
+| `frontend/js/admin.js` | Nuevo: lógica del panel |
+| `frontend/js/auth.js` | Nueva función `obtenerSesion` (valida existencia y vencimiento del token) |
+| `tests/test_endpoints.py` | Nuevo: pruebas de 401 y 403 con `TestClient` |
+| `requirements.txt` | Agrega `httpx` (lo necesita `TestClient`) |
+| `index.html`, `app.js` | Eliminados: eran el panel anterior, que enviaba peticiones sin token |
+| `operator_dashboard.html`, `client_dashboard.html`, `prueba_repo.py` | Eliminados: estaban vacíos o eran un script de prueba suelto |
+| `.gitignore` | Corregido el typo `__pychache__/` |
+
+### Cómo funciona
+
+1. **Guardia de rol**: al cargar, `obtenerSesion()` verifica que haya token y que no esté vencido, y que el `rol` sea `admin`. Si no, borra el token y redirige a `login.html`.
+2. **Barra superior**: botón "Cerrar sesión (usuario)" arriba a la derecha y buscador a lo ancho.
+3. **Buscador**: sin texto, la tabla muestra los tickets `abierto` con la fecha de hoy. Con texto, busca entre **todos** los tickets (abiertos y cerrados) por nombre de proveedor o patente.
+4. **Columna izquierda**: formulario Nuevo ticket (chofer, patente, peso tara, peso bruto opcional y desplegable dinámico de proveedores).
+5. **Columna central**: botones redondeados Cerrar ticket (pide el ID), Agregar proveedor (`POST /suppliers/`) y Agregar producto.
+6. **Columna derecha**: tabla de tickets abiertos de hoy, con botón Cerrar en cada fila.
+7. **Modal**: reemplaza a `prompt()` y `alert()` con una ventana de W3.CSS; se cierra con Cancelar, `Esc` o clic en el fondo, y valida el dato antes de aceptarlo.
+
+### Decisiones técnicas
+
+- **Fuente única de verdad**: tras crear o cerrar un ticket, o crear un proveedor, se vuelve a pedir la lista a la API; el frontend no modifica datos localmente.
+- **Filtrado en el navegador**: se pide la lista una vez y el buscador filtra sin nuevas peticiones.
+- **Fecha local**: "hoy" se calcula con la fecha del navegador (no con `toISOString()`, que usa UTC y podría dar otro día).
+- **Sin `innerHTML` con datos**: filas, celdas y opciones se crean con `createElement`, `textContent` y `replaceChildren`; los eventos se enlazan con `addEventListener`.
+- **Estilo**: solo clases de W3.CSS; no fue necesario modificar `styles.css`.
+- **Tests de seguridad**: `test_endpoints.py` sustituye al usuario con `dependency_overrides`, así que no necesita base de datos.
+
+### Cómo probarlo
+
+1. Sin sesión, abrir `admin.html`: redirige a `login.html`.
+2. Entrar como cliente y abrir `admin.html` a mano: redirige y borra el token.
+3. Entrar como admin: se ve el panel con el usuario arriba a la derecha.
+4. Crear un ticket solo con tara: aparece en la tabla como `abierto`.
+5. Crear uno con tara y bruto: queda `cerrado` y no aparece en la lista de abiertos de hoy.
+6. Cerrar un ticket desde su fila y desde el botón central.
+7. Agregar un proveedor: aparece en el desplegable sin recargar.
+8. Buscar por patente y por proveedor; al borrar el texto vuelve la lista de hoy.
+9. Ejecutar `pytest`.
+
+### Pendientes conocidos
+
+- **Agregar producto** solo muestra un aviso: no existe aún el endpoint de productos.
+- "Hoy" se calcula con la fecha del navegador y la API usa la fecha del servidor; si MySQL corre en UTC, un ticket cargado por la noche puede quedar con la fecha del día siguiente.
+- `cliente.html` (vista de cliente de solo lectura) queda para el próximo ticket.
