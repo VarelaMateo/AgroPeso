@@ -61,3 +61,24 @@ Este mismo patrón exacto se utiliza para el sistema de seguridad y roles de usu
 ```text
 HTTP (Bearer Token) → Middleware (get_current_user) → Router (esquemas + exigir_admin) → TicketService (reglas + filtro por UsuarioActual) → TicketRepository → MySQL
 ```
+
+
+---
+
+## Frontend y sesión
+
+El frontend se separa en vistas por rol; no se ocultan botones en una misma pantalla.
+
+| Archivo | Responsabilidad |
+|---|---|
+| `login.html` | Autenticación; redirige según el rol |
+| `admin.html` + `admin.js` | Operativa de báscula (solo rol `admin`) |
+| `auth.js` | Sesión compartida: token, lectura del payload, `fetchConToken` |
+
+```text
+login.html → POST /auth/login → token en localStorage → admin.html (guardia de rol) → fetchConToken → API
+```
+
+* La guardia del frontend (`obtenerSesion()` + rol) solo decide qué pantalla mostrar. La autorización real es del backend (`exigir_admin` y el filtrado por `UsuarioActual`).
+* Ante un 401, `fetchConToken` borra el token y vuelve al login.
+* Todo el DOM dinámico se construye con `createElement` y `textContent` (sin `innerHTML` con datos), y los eventos se enlazan con `addEventListener`.
