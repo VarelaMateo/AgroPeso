@@ -5,32 +5,76 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AgroPeso - Iniciar sesión</title>
   <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <style>
+    /* Único CSS propio: lo que W3.CSS no puede hacer (imagen de fondo y efecto vidrio) */
+    body.login-fondo {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* capas: oscurecido, foto, y degradado de respaldo si falta la foto */
+      background:
+        linear-gradient(rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.25)),
+        url("../img/campo.jpg") center / cover no-repeat,
+        linear-gradient(to bottom, #9ec9e8 0%, #cfe3c8 45%, #7fa650 46%, #4d7a2b 100%);
+      background-attachment: fixed;
+    }
+
+    .login-vidrio {
+      width: 90%;
+      max-width: 380px;
+      background: rgba(20, 40, 20, 0.35);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    .login-campo {
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    }
+    .login-campo::placeholder { color: rgba(255, 255, 255, 0.75); }
+    .login-campo:focus {
+      outline: none;
+      border-color: #fff !important;
+      background: rgba(255, 255, 255, 0.12) !important;
+    }
+    /* Evita el fondo amarillo/azul del autocompletado del navegador */
+    .login-campo:-webkit-autofill {
+      -webkit-text-fill-color: #fff;
+      transition: background-color 9999s ease-in-out 0s;
+    }
+  </style>
 </head>
-<body class="w3-black">
+<body class="login-fondo">
 
-  <main class="w3-content w3-padding-32" style="max-width: 400px; margin-top: 8vh;">
-    <form id="form-login" class="w3-card-4 w3-dark-grey w3-container w3-padding-16 w3-border-top w3-border-green"
-          style="border-top-width: 4px !important;">
-      <h1 class="w3-center w3-text-green">AgroPeso</h1>
-      <p class="w3-center w3-text-light-grey">Iniciar sesión</p>
+  <main class="login-vidrio w3-container w3-padding-24 w3-margin">
+    <form id="form-login" class="w3-padding">
+      <h1 class="w3-center w3-text-white"><b>AgroPeso</b></h1>
+      <p class="w3-center w3-text-white">Iniciar sesión</p>
 
       <p>
-        <label for="username">Usuario</label>
-        <input class="w3-input w3-border w3-black" type="text" id="username" name="username"
-               autocomplete="username" maxlength="50" required autofocus>
+        <input class="w3-input w3-transparent w3-round-xxlarge w3-padding login-campo"
+               type="text" id="username" name="username" placeholder="Usuario"
+               aria-label="Usuario" autocomplete="username" maxlength="50" required autofocus>
       </p>
 
       <p>
-        <label for="password">Contraseña</label>
-        <input class="w3-input w3-border w3-black" type="password" id="password" name="password"
-               autocomplete="current-password" maxlength="128" required>
+        <input class="w3-input w3-transparent w3-round-xxlarge w3-padding login-campo"
+               type="password" id="password" name="password" placeholder="Contraseña"
+               aria-label="Contraseña" autocomplete="current-password" maxlength="128" required>
       </p>
 
       <p>
-        <button class="w3-button w3-green w3-block" type="submit">Ingresar</button>
+        <button class="w3-button w3-white w3-hover-pale-green w3-round-xxlarge w3-block" type="submit">
+          <b>Ingresar</b>
+        </button>
       </p>
 
-      <div id="mensaje" class="w3-panel w3-leftbar w3-pale-red w3-border-red" style="display: none;"></div>
+      <div id="mensaje" class="w3-panel w3-leftbar w3-round w3-pale-red w3-border-red" style="display: none;"></div>
     </form>
   </main>
 
