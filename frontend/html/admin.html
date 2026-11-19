@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgroPeso - Panel del administrador</title>
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+</head>
+<body class="w3-light-grey">
+
+  <!-- Barra superior -->
+  <header class="w3-bar w3-green w3-padding">
+    <span class="w3-bar-item w3-xlarge"><b>AgroPeso</b> · Administrador</span>
+    <button id="btn-logout" type="button" class="w3-bar-item w3-button w3-round w3-right w3-white">
+      Cerrar sesión (<span id="nombre-usuario"></span>)
+    </button>
+  </header>
+
+  <!-- Buscador a lo ancho -->
+  <div class="w3-container w3-padding-16">
+    <input id="buscador" class="w3-input w3-border w3-round-xxlarge" type="search"
+           placeholder="Buscar tickets (abiertos o cerrados) por proveedor o patente...">
+  </div>
+
+  <main class="w3-row-padding w3-padding-bottom-32">
+
+    <!-- Columna izquierda: Nuevo ticket -->
+    <section class="w3-col l3 m12 w3-margin-bottom">
+      <form id="form-pesaje" class="w3-card-4 w3-white w3-container w3-padding-16">
+        <h3 class="w3-center">Nuevo ticket</h3>
+
+        <p>
+          <label for="chofer">Chofer</label>
+          <input class="w3-input w3-border" type="text" id="chofer" name="chofer" maxlength="200" required>
+        </p>
+        <p>
+          <label for="patente">Patente</label>
+          <input class="w3-input w3-border" type="text" id="patente" name="patente" maxlength="11" placeholder="Ej: HKN279">
+        </p>
+        <p>
+          <label for="peso_tara">Peso tara (kg)</label>
+          <input class="w3-input w3-border" type="number" id="peso_tara" name="peso_tara" min="1" step="1" required>
+        </p>
+        <p>
+          <label for="peso_bruto">Peso bruto (kg) <small>(opcional)</small></label>
+          <input class="w3-input w3-border" type="number" id="peso_bruto" name="peso_bruto" min="1" step="1">
+        </p>
+        <p>
+          <label for="supplier_id">Proveedor</label>
+          <select class="w3-select w3-border" id="supplier_id" name="supplier_id" required>
+            <option value="" disabled selected>Cargando proveedores...</option>
+          </select>
+        </p>
+        <p>
+          <button class="w3-button w3-green w3-block" type="submit">Registrar pesada</button>
+        </p>
+        <div id="mensaje" class="w3-panel" style="display: none;"></div>
+      </form>
+    </section>
+
+    <!-- Columna central: acciones rápidas -->
+    <section class="w3-col l2 m12 w3-margin-bottom">
+      <div class="w3-card-4 w3-white w3-container w3-padding-16">
+        <h3 class="w3-center">Acciones</h3>
+        <p><button id="btn-cerrar" type="button" class="w3-button w3-round-xxlarge w3-blue w3-block">Cerrar ticket</button></p>
+        <p><button id="btn-proveedor" type="button" class="w3-button w3-round-xxlarge w3-teal w3-block">Agregar proveedor</button></p>
+        <p><button id="btn-producto" type="button" class="w3-button w3-round-xxlarge w3-orange w3-block">Agregar producto</button></p>
+      </div>
+    </section>
+
+    <!-- Columna derecha: tabla -->
+    <section class="w3-col l7 m12 w3-margin-bottom">
+      <div class="w3-card-4 w3-white w3-container w3-padding-16">
+        <h3 id="titulo-tabla" class="w3-center">Lista de tickets abiertos de hoy</h3>
+        <div class="w3-responsive">
+          <table class="w3-table-all w3-hoverable w3-small">
+            <thead>
+              <tr class="w3-green">
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Chofer</th>
+                <th>Patente</th>
+                <th>Proveedor</th>
+                <th>Tara</th>
+                <th>Bruto</th>
+                <th>Neto</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-historial">
+              <tr><td colspan="10" class="w3-center">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+    <!-- Modal reutilizable (reemplaza prompt y alert) -->
+    <div id="modal" class="w3-modal">
+        <div class="w3-modal-content w3-card-4 w3-animate-top" style="max-width: 420px;">
+        <header class="w3-container w3-green">
+            <h3 id="modal-titulo"></h3>
+        </header>
+        <form id="modal-form" class="w3-container w3-padding-16">
+            <p id="modal-texto"></p>
+            <p id="modal-campo">
+            <input id="modal-input" class="w3-input w3-border w3-round" autocomplete="off">
+            </p>
+            <p id="modal-error" class="w3-text-red w3-small" style="display: none;"></p>
+            <div class="w3-right">
+            <button type="button" id="modal-cancelar" class="w3-button w3-round w3-light-grey">Cancelar</button>
+            <button type="submit" id="modal-aceptar" class="w3-button w3-round w3-green">Aceptar</button>
+            </div>
+            <div class="w3-clear"></div>
+        </form>
+        </div>
+    </div>
+
+    <script src="../js/auth.js"></script>
+    <script src="../js/admin.js"></script>
+</body>
+</html>

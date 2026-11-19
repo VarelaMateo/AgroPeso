@@ -46,6 +46,15 @@ function paginaSegunRol(rol){
     return PAGINAS_POR_ROL[rol] ?? null;
 }
 
+// Devuelve el payload del token si existe y no venció; si no, null
+function obtenerSesion() {
+    const token = obtenerToken();
+    if (!token) return null;
+    const payload = decodificarPayLoad(token);
+    if (!payload || payload.exp * 1000 < Date.now()) return null;
+    return payload;
+}
+
 // --- Helper de peticiones autenticadas ---
 // Agrega el header Authorization. Si no hay token o la API responde 401
 // (token inválido o vencido), borra la sesión y vuelve al login.
@@ -83,13 +92,13 @@ if (formLogin) {
     const boton = formLogin.querySelector("button[type='submit']");
 
     function mostrarError(text){
-        mensaje.textContent = texto;
+        mensaje.textContent = text;
         mensaje.style.display = "block";
     }
 
     const tokenExistente = obtenerToken();
     if (tokenExistente){
-        const destino = paginaSegunRol(decodificarPayLoad(tokenExistente)?.rol);
+        const destino = paginaSegunRol(obtenerSesion()?.rol);
         if (destino){
             window.location.href = destino;
         } else {
@@ -125,7 +134,7 @@ if (formLogin) {
             }
 
             const datos = await respuesta.json();
-            const rol = decodificarPayload(datos.access_token)?.rol;
+            const rol = decodificarPayLoad(datos.access_token)?.rol;
             const destino = paginaSegunRol(rol);
 
             if (!destino) {
