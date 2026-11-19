@@ -25,7 +25,7 @@ Desde la carpeta `frontend/`:
 ```bash
 python3 -m http.server 5500
 ```
-Abrir `http://localhost:5500/html/index.html` (o usar Live Server de VS Code).
+Abrir `http://localhost:5500/html/login.html` (o usar Live Server de VS Code). El punto de entrada es el login; según el rol, redirige al panel correspondiente.
 
 *Nota sobre CORS:* `CORS_ORIGINS` en el `.env` define qué orígenes pueden consultar la API (ej: `http://localhost:5500`). Si usas Codespaces, asegúrate de añadir la URL generada o configurar los puertos correctamente.
 
