@@ -152,6 +152,6 @@ Petición:
 
 ## Pendientes conocidos
 * Si el `supplier_id` no existe o el `numero_ticket` está repetido, MySQL rechaza la operación y la API responde 500. Falta traducirlo a un error controlado (409).
-* La interfaz web actual envía siempre tara y bruto. Falta UI para abrir/cerrar.
+* No se impide crear dos proveedores con el mismo nombre.
 * Asunción: La primera pesada es la tara. Revaluar si hay camiones que llegan cargados.
 * Paginación pendiente para el `GET /tickets/`.
