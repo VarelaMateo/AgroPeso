@@ -98,26 +98,27 @@
 
   </main>
     <!-- Modal reutilizable (reemplaza prompt y alert) -->
-  <div id="modal" class="w3-modal">
-    <div class="w3-modal-content w3-card-4 w3-animate-top" style="max-width: 420px;">
-      <header class="w3-container w3-green">
-        <h3 id="modal-titulo"></h3>
-      </header>
-      <form id="modal-form" class="w3-container w3-padding-16">
-        <p id="modal-texto"></p>
-        <p id="modal-campo">
-          <input id="modal-input" class="w3-input w3-border w3-round" autocomplete="off">
-        </p>
-        <p id="modal-error" class="w3-text-red w3-small" style="display: none;"></p>
-        <div class="w3-right">
-          <button type="button" id="modal-cancelar" class="w3-button w3-round w3-light-grey">Cancelar</button>
-          <button type="submit" id="modal-aceptar" class="w3-button w3-round w3-green">Aceptar</button>
+    <div id="modal" class="w3-modal">
+        <div class="w3-modal-content w3-card-4 w3-animate-top" style="max-width: 420px;">
+        <header class="w3-container w3-green">
+            <h3 id="modal-titulo"></h3>
+        </header>
+        <form id="modal-form" class="w3-container w3-padding-16">
+            <p id="modal-texto"></p>
+            <p id="modal-campo">
+            <input id="modal-input" class="w3-input w3-border w3-round" autocomplete="off">
+            </p>
+            <p id="modal-error" class="w3-text-red w3-small" style="display: none;"></p>
+            <div class="w3-right">
+            <button type="button" id="modal-cancelar" class="w3-button w3-round w3-light-grey">Cancelar</button>
+            <button type="submit" id="modal-aceptar" class="w3-button w3-round w3-green">Aceptar</button>
+            </div>
+            <div class="w3-clear"></div>
+        </form>
         </div>
-        <div class="w3-clear"></div>
-      </form>
     </div>
-  </div>
-  
-  <script src="../js/admin.js"></script>
+
+    <script src="../js/auth.js"></script>
+    <script src="../js/admin.js"></script>
 </body>
 </html>

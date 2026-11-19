@@ -2,55 +2,15 @@ const API = "http://127.0.0.1:8000";
 const API_TICKETS = `${API}/tickets/`;
 const API_PROVEEDORES = `${API}/suppliers/`;
 const PAGINA_LOGIN = "login.html";
-const CLAVE_TOKEN = "access_token";
 
-// Sesion y guardia de rol
-
-function leerSesion() {
-    const token = localStorage.getItem(CLAVE_TOKEN);
-    if (!token) return null;
-    try {
-        const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-        const payload = JSON.parse(atob(base64));
-
-        if (payload.exp * 1000 < Date.now()) return null;
-        return payload;
-    } catch(_){
-        return null;
-    }
-}
-
-function cerrarSesion() {
-    localStorage.removeItem(CLAVE_TOKEN);
-    location.replace(PAGINA_LOGIN);
-}
-
-// fetch que agrega el token; si el backend 401, saca al usuario
-
-async function apiFetch(url, opciones = {}) {
-    const headers = {
-        ...(opciones.headers || {}),
-        Authorization: `Bearer ${localStorage.getItem(CLAVE_TOKEN)}`,
-    };
-
-    const respuesta = await fetch(url, {...opciones, headers});
-    if (respuesta.status === 401){
-        cerrarSesion();
-        throw new Error("Sesion invalida");
-    }
-
-    return respuesta;
-}
-
-
-const sesion = leerSesion();
+// Guardia de rol. obtenerSesion, borrarToken y fetchConToken vienen de auth.js
+const sesion = obtenerSesion();
 const accesoPermitido = sesion !== null && sesion.rol === "admin";
 
-if(!accesoPermitido) {
-    localStorage.removeItem(CLAVE_TOKEN);
+if (!accesoPermitido) {
+    borrarToken();
     location.replace(PAGINA_LOGIN);
 }
-
 
 // Elementos y estado
 
@@ -97,7 +57,7 @@ function formatoFecha(fecha){
 }
 
 function formatoPeso(valor) {
-    return valor === null ? "-" : valor.toLocaleString("es-AR");
+    return valor === null ? "—" : valor.toLocaleString("es-AR");
 }
 
 function crearCelda(texto) {
@@ -266,7 +226,7 @@ function renderizarTabla() {
 
 async function cargarTickets() {
     try {
-        const respuesta = await apiFetch(API_TICKETS);
+        const respuesta = await fetchConToken(API_TICKETS);
         if (!respuesta.ok) throw new Error(`Error ${respuesta.status}`);
         todosLosTickets = await  respuesta.json();
         renderizarTabla();
@@ -285,7 +245,7 @@ function crearOpcion(valor, texto, esPlaceholder = false) {
     opcion.value = valor;
     opcion.textContent = texto;
     if (esPlaceholder) {
-        opcion.disable = true;
+        opcion.disabled = true;
         opcion.defaultSelected = true; //form.reset() vuelve a esta opcn
     }
 
@@ -294,7 +254,7 @@ function crearOpcion(valor, texto, esPlaceholder = false) {
 
 async function cargarProveedores() {
     try{
-        const respuesta = await apiFetch(API_PROVEEDORES);
+        const respuesta = await fetchConToken(API_PROVEEDORES);
         if (!respuesta.ok) throw new Error (`Error ${respuesta.status}`);
         const proveedores = await respuesta.json();
 
@@ -324,7 +284,7 @@ async function agregarProveedores() {
     if (nombre === null) return;
 
     try {
-        const respuesta = await apiFetch(API_PROVEEDORES, {
+        const respuesta = await fetchConToken(API_PROVEEDORES, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name: nombre }),
@@ -357,7 +317,7 @@ async function cerrarTicket(id) {
     if (entrada === null) return;
 
     try {
-        const respuesta = await apiFetch(`${API_TICKETS}${id}/cerrar`, {
+        const respuesta = await fetchConToken(`${API_TICKETS}${id}/cerrar`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ peso_bruto: Number(entrada) }),
@@ -403,7 +363,7 @@ form.addEventListener("submit", async (event) => {
 
     botonSubmit.disabled = true;
     try {
-        const respuesta = await apiFetch(API_TICKETS, {
+        const respuesta = await fetchConToken(API_TICKETS, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(datos),
@@ -422,7 +382,7 @@ form.addEventListener("submit", async (event) => {
             mostrarMensaje(`Error ${respuesta.status}: no se pudo registrar la pesada`, "error");
         }
     } catch (error) {
-        if (error.message !== "Sesión inválida") {
+        if (error.message !== "Sesion vencida o invalida") {
             mostrarMensaje("No se pudo conectar con el servidor. ¿Está encendida la API?", "error");
         }
     } finally {
@@ -436,7 +396,7 @@ document.getElementById("btn-logout").addEventListener("click", cerrarSesion);
 document.getElementById("btn-cerrar").addEventListener("click", cerrarTicketPorId);
 document.getElementById("btn-proveedor").addEventListener("click", agregarProveedores);
 document.getElementById("btn-producto").addEventListener("click", () => {
-    alert("Todavía no existe el endpoint de productos en el backend. Queda para un ticket posterior.");
+    avisar("Todavía no existe el endpoint de productos en el backend. Queda para un ticket posterior.", "Agregar producto");
 });
 
 async function iniciar() {
@@ -445,8 +405,5 @@ async function iniciar() {
     await cargarTickets();
 }
 
-document.getElementById("btn-producto").addEventListener("click", () => {
-    avisar("Todavía no existe el endpoint de productos en el backend. Queda para un ticket posterior.", "Agregar producto");
-});
 
 if (accesoPermitido) iniciar();
