@@ -63,6 +63,12 @@ ALTER TABLE tickets
   ADD COLUMN estado VARCHAR(10) NOT NULL DEFAULT 'abierto';
 UPDATE tickets SET estado = 'cerrado' WHERE peso_bruto IS NOT NULL;"
 ```
+Desde AGROPESO-022 el nombre del proveedor es único. En una base existente hay que agregar la restricción a mano (antes, verificar que no haya nombres repetidos):
+
+```sql
+sudo mysql AgroPeso -e "ALTER TABLE suppliers ADD CONSTRAINT uq_suppliers_name UNIQUE (name);"
+```
+
 *A futuro, se implementarán migraciones con Alembic para evitar el uso de `ALTER TABLE` manual.*
 
 ---

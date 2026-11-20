@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from middleware.security import exigir_admin, get_current_user
@@ -9,6 +9,7 @@ from models.suppliers import SupplierEntity
 from repository.supplier_repository import SupplierRepository
 from schemas.supplier_schema import SupplierCreate, SupplierResponse
 from services.supplier_service import SupplierService
+from utils.exceptions import ProveedorDuplicadoError
 
 router = APIRouter(prefix = "/suppliers", tags=["Suppliers"])
 
@@ -22,6 +23,9 @@ def crear_proveedor(datos: SupplierCreate, db: Session = Depends(get_db), user: 
     exigir_admin(user)
     service = SupplierService(SupplierRepository(db))
     proveedor = SupplierEntity(**datos.model_dump()) #esquema -> entidad pura
-    return service.crear_proveedor(proveedor)
+    try:
+        return service.crear_proveedor(proveedor)
+    except ProveedorDuplicadoError as e:
+        raise HTTPException(status_code = 409, detail = str(e))
 
 

@@ -2,6 +2,7 @@ from datetime import date
 
 import pytest
 
+from models.suppliers import SupplierEntity
 from models.ticket_model import EstadoTicket, Ticket
 from services.ticket_service import TicketService
 from utils.exceptions import ReglaNegocioError, TicketNoEncontradoError
@@ -36,13 +37,21 @@ class RepositorioEnMemoria:
         return tickets
 
 
+class ProveedoresEnMemoria:
+    def __init__(self):
+        self.proveedores = {1: SupplierEntity(name="Berg", id=1), 2: SupplierEntity(name="Otro", id=2)}
+
+    def get_supplier_by_id(self, supplier_id):
+        return self.proveedores.get(supplier_id)
+
+
 def crear_ticket(tara, bruto, supplier_id=1):
     return Ticket(date.today(), "Ivan Derio", "HKN279", tara, bruto, supplier_id)
 
 
 @pytest.fixture
 def service():
-    return TicketService(RepositorioEnMemoria())
+    return TicketService(RepositorioEnMemoria(), ProveedoresEnMemoria())
 
 
 # --- Entidad ---
@@ -81,6 +90,12 @@ def test_registrar_con_bruto_menor_a_la_tara_lanza_error(service):
 def test_registrar_con_bruto_igual_a_la_tara_lanza_error(service):
     with pytest.raises(ReglaNegocioError):
         service.registrar_pesada(crear_ticket(15160, 15160))
+
+
+def test_registrar_con_proveedor_inexistente_lanza_error_y_no_guarda(service):
+    with pytest.raises(ReglaNegocioError, match="proveedor"):
+        service.registrar_pesada(crear_ticket(15160, None, supplier_id=999))
+    assert service.obtener_todos_los_tickets(ADMIN) == []
 
 
 # --- Cerrar ticket ---
