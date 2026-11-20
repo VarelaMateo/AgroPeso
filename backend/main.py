@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import models
-from routers import ticket_router, supplier_router, product_router, auth_router
+from routers import ticket_router, supplier_router, product_router, user_router, auth_router
 
 load_dotenv()
 
@@ -24,4 +24,5 @@ app.add_middleware(
 app.include_router(ticket_router.router)
 app.include_router(supplier_router.router)
 app.include_router(product_router.router)
+app.include_router(user_router.router)
 app.include_router(auth_router.router)

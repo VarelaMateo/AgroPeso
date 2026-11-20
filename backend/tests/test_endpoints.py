@@ -8,6 +8,10 @@ from models.user_model import Rol, UsuarioActual
 client = TestClient(app)
 
 TICKET = {"chofer": "Ivan Derio", "peso_tara": 15160, "supplier_id": 1}
+CLIENTE = {"username": "cliente_api_test", "password": "clave123", "supplier_id": 1}
+
+
+ADMIN_SIN_BD = UsuarioActual(username="admin_test", rol=Rol.ADMIN)
 
 
 def como(usuario):
@@ -24,6 +28,7 @@ def test_sin_token_responde_401():
     assert client.get("/suppliers/").status_code == 401
     assert client.get("/products/").status_code == 401
     assert client.post("/products/", json={"name": "Soja"}).status_code == 401
+    assert client.post("/users/", json=CLIENTE).status_code == 401
 
 
 def test_token_invalido_responde_401():
@@ -44,6 +49,16 @@ def test_cliente_no_puede_cerrar_ticket():
 def test_cliente_no_puede_crear_proveedor():
     como(UsuarioActual(username="c", rol=Rol.CLIENTE, supplier_id=1))
     assert client.post("/suppliers/", json={"name": "Berg"}).status_code == 403
+
+
+def test_cliente_no_puede_crear_usuarios():
+    como(UsuarioActual(username="c", rol=Rol.CLIENTE, supplier_id=1))
+    assert client.post("/users/", json=CLIENTE).status_code == 403
+
+
+def test_alta_de_cliente_no_acepta_rol():
+    como(ADMIN_SIN_BD)
+    assert client.post("/users/", json={**CLIENTE, "rol": "admin"}).status_code == 422
 
 
 def test_cliente_no_puede_crear_producto():
@@ -125,3 +140,36 @@ def test_ticket_con_producto_existente_responde_201(session, proveedor, producto
     r = client.post("/tickets/", json={**TICKET, "supplier_id": proveedor.id, "product_id": producto.id})
     assert r.status_code == 201
     assert r.json()["product_id"] == producto.id
+
+
+# --- Alta de clientes (base real, se deshace con rollback) ---
+
+def test_admin_crea_cliente_y_el_cliente_puede_loguearse(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    r = client.post("/users/", json={**CLIENTE, "supplier_id": proveedor.id})
+    assert r.status_code == 201
+    cuerpo = r.json()
+    assert cuerpo["rol"] == "cliente"
+    assert cuerpo["supplier_id"] == proveedor.id
+    assert "password" not in cuerpo and "password_hash" not in cuerpo
+
+    login = client.post("/auth/login", data={"username": CLIENTE["username"], "password": CLIENTE["password"]})
+    assert login.status_code == 200
+
+
+def test_usuario_duplicado_responde_409(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    datos = {**CLIENTE, "supplier_id": proveedor.id}
+    assert client.post("/users/", json=datos).status_code == 201
+    r = client.post("/users/", json={**datos, "username": CLIENTE["username"].upper()})
+    assert r.status_code == 409
+
+
+def test_cliente_con_proveedor_inexistente_responde_400(session):
+    como(ADMIN)
+    usar_sesion(session)
+    r = client.post("/users/", json={**CLIENTE, "supplier_id": 999999})
+    assert r.status_code == 400
+    assert "proveedor" in r.json()["detail"]

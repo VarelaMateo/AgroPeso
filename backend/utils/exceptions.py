@@ -9,3 +9,6 @@ class ProveedorDuplicadoError(Exception):
 
 class ProductoDuplicadoError(Exception):
     pass
+
+class UsuarioDuplicadoError(Exception):
+    pass

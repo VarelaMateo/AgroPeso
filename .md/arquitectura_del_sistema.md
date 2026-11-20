@@ -62,6 +62,8 @@ Este mismo patrón exacto se utiliza para el sistema de seguridad y roles de usu
 | `User` | Negocio | Entidad pura de dominio (con enum de roles) |
 | `UserCreate` / `UserResponse` | Presentación | Esquemas Pydantic para validar entradas |
 
+El alta de clientes (`POST /users/`) usa `ClienteCreate` como esquema de entrada y `UserService`, que recibe `UserRepository` y `SupplierRepository` para validar que el usuario no exista y que el proveedor sí.
+
 *Nota de seguridad:* El esquema `UserResponse` omite intencionalmente el campo `password_hash` para garantizar que la contraseña encriptada nunca abandone la capa de negocio o datos hacia el cliente.
 
 ---

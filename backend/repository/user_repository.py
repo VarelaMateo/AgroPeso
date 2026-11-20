@@ -1,7 +1,9 @@
 from typing import Optional
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from models.user_model import Rol, User, UserDB
+from utils.exceptions import UsuarioDuplicadoError
 
 class UserRepository:
     def __init__(self, session: Session):
@@ -16,7 +18,12 @@ class UserRepository:
     def create_user(self, user:User) -> User:
         user_db = self._to_db(user)
         self.session.add(user_db)
-        self.session.commit()
+        try:
+            self.session.commit()
+        except IntegrityError:
+            # Otra petición creó el mismo usuario entre la validación del servicio y este insert
+            self.session.rollback()
+            raise UsuarioDuplicadoError(f"Ya existe el usuario '{user.username}'")
         self.session.refresh(user_db)
 
         return self._to_entity(user_db)

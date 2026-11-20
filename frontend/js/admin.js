@@ -2,6 +2,7 @@ const API = "http://127.0.0.1:8000";
 const API_TICKETS = `${API}/tickets/`;
 const API_PROVEEDORES = `${API}/suppliers/`;
 const API_PRODUCTOS = `${API}/products/`;
+const API_USUARIOS = `${API}/users/`;
 const PAGINA_LOGIN = "login.html";
 
 // Guardia de rol. obtenerSesion, borrarToken y fetchConToken vienen de auth.js
@@ -186,7 +187,9 @@ modal.addEventListener("click", (event) => {
     if (event.target === modal) cerrarModal(null); // clic en el fondo oscuro
 });
 document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && modal.style.display === "block") cerrarModal(null);
+    if (event.key !== "Escape") return;
+    if (modal.style.display === "block") cerrarModal(null);
+    else if (modalCliente.style.display === "block") cerrarModalCliente();
 });
 
 
@@ -411,6 +414,93 @@ async function agregarProducto() {
     }
 }
 
+// Clientes (modal propio: tiene varios campos)
+
+const modalCliente = document.getElementById("modal-cliente");
+const formCliente = document.getElementById("form-cliente");
+const clienteUsername = document.getElementById("cliente-username");
+const clientePassword = document.getElementById("cliente-password");
+const clientePassword2 = document.getElementById("cliente-password2");
+const clienteProveedor = document.getElementById("cliente-proveedor");
+const clienteError = document.getElementById("cliente-error");
+const clienteGuardar = document.getElementById("cliente-guardar");
+
+function mostrarErrorCliente(texto) {
+    clienteError.textContent = texto;
+    clienteError.style.display = "block";
+}
+
+function abrirModalCliente() {
+    formCliente.reset();
+    clienteError.style.display = "none";
+
+    // Mismos proveedores que el formulario de tickets, ya cargados en proveedoresPorId
+    const proveedores = Object.entries(proveedoresPorId).sort((a, b) => a[1].localeCompare(b[1]));
+    const textoInicial = proveedores.length === 0 ? "No hay proveedores cargados" : "Elegí un proveedor";
+    const opciones = [crearOpcion("", textoInicial, true)];
+    for (const [id, nombre] of proveedores) opciones.push(crearOpcion(id, nombre));
+    clienteProveedor.replaceChildren(...opciones);
+
+    modalCliente.style.display = "block";
+    setTimeout(() => clienteUsername.focus(), 50);
+}
+
+function cerrarModalCliente() {
+    modalCliente.style.display = "none";
+    formCliente.reset(); // no dejar la contraseña escrita en el DOM
+}
+
+// Mismas reglas que ClienteCreate en el backend
+function validarCliente(username, password, password2, supplierId) {
+    if (username.length < 3 || username.length > 50) return "El usuario debe tener entre 3 y 50 caracteres";
+    if (password.length < 6) return "La contraseña debe tener al menos 6 caracteres";
+    if (new TextEncoder().encode(password).length > 72) return "La contraseña puede tener hasta 72 bytes";
+    if (password !== password2) return "Las contraseñas no coinciden";
+    if (supplierId === "") return "Elegí un proveedor";
+    return null;
+}
+
+formCliente.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const username = clienteUsername.value.trim();
+    const password = clientePassword.value; // la contraseña no se recorta
+    const supplierId = clienteProveedor.value;
+
+    const error = validarCliente(username, password, clientePassword2.value, supplierId);
+    if (error) {
+        mostrarErrorCliente(error);
+        return;
+    }
+
+    clienteGuardar.disabled = true;
+    try {
+        const respuesta = await fetchConToken(API_USUARIOS, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password, supplier_id: Number(supplierId) }),
+        });
+        if (!respuesta.ok) {
+            // El error se muestra dentro del modal para no perder lo que se escribió
+            const cuerpo = await respuesta.json().catch(() => ({}));
+            mostrarErrorCliente(cuerpo.detail ? textoDeError(cuerpo.detail) : `Error ${respuesta.status}`);
+            return;
+        }
+        const creado = await respuesta.json();
+        cerrarModalCliente();
+        mostrarMensaje(`Cliente "${creado.username}" creado para ${proveedoresPorId[creado.supplier_id] ?? "el proveedor " + creado.supplier_id}`, "ok");
+    } catch (error) {
+        console.error("Error al crear el cliente:", error);
+        mostrarErrorCliente("No se pudo conectar con el servidor.");
+    } finally {
+        clienteGuardar.disabled = false;
+    }
+});
+
+document.getElementById("cliente-cancelar").addEventListener("click", cerrarModalCliente);
+modalCliente.addEventListener("click", (event) => {
+    if (event.target === modalCliente) cerrarModalCliente(); // clic en el fondo oscuro
+});
+
 // Cerrar ticket
 
 async function cerrarTicket(id) {
@@ -505,6 +595,7 @@ document.getElementById("btn-logout").addEventListener("click", cerrarSesion);
 document.getElementById("btn-cerrar").addEventListener("click", cerrarTicketPorId);
 document.getElementById("btn-proveedor").addEventListener("click", agregarProveedores);
 document.getElementById("btn-producto").addEventListener("click", agregarProducto);
+document.getElementById("btn-cliente").addEventListener("click", abrirModalCliente);
 
 async function iniciar() {
     document.getElementById("nombre-usuario").textContent = sesion.username;
