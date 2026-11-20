@@ -897,3 +897,71 @@ El administrador puede elegir la fecha de un ticket para cargar pesadas de días
 2. Cambiar la fecha a un día anterior → registrar → no aparece en *abiertos de hoy*; buscarlo con el filtro *Desde/Hasta* de ese día.
 3. **Editar** un ticket → cambiar la fecha → guardar → la tabla muestra la fecha nueva.
 4. El selector de fecha no deja elegir días posteriores a hoy.
+
+---
+
+## AGROPESO-029: Dashboard de facturación y control de pesadas facturadas
+
+Cada pesada tiene un estado de facturación (*no facturado* por defecto). La nueva pantalla `facturas.html` (solo admin) muestra el estado de cada proveedor y permite marcar como facturadas, en lote, las pesadas de un proveedor en un rango de fechas.
+
+### Base de datos
+
+```sql
+ALTER TABLE tickets ADD COLUMN facturado BOOLEAN NOT NULL DEFAULT FALSE;
+```
+
+Hay que ejecutarlo en la base local **y en la de Railway antes de publicar**: sin la columna, la API nueva responde `500` en todas las consultas de tickets.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `backend/models/ticket_model.py` | `facturado` en la entidad `Ticket` (por defecto `False`) y columna `facturado` en `TicketDB` |
+| `backend/repository/ticket_repository.py` | `facturado` en `_to_db`, `_to_entity` y `update_ticket`; **nuevo** `facturar_rango` (un solo `UPDATE`) |
+| `backend/schemas/ticket_schema.py` | `facturado` en `TicketResponse`; **nuevos** `FacturarRangoRequest` (`extra="forbid"`, valida el orden de las fechas) y `FacturarRangoResponse` |
+| `backend/services/ticket_service.py` | **Nuevo** `facturar_por_rango` (verifica el proveedor y devuelve el resumen) |
+| `backend/routers/ticket_router.py` | **Nuevo** `PATCH /tickets/facturar` (solo admin) |
+| `backend/tests/test_server.py`, `backend/tests/test_endpoints.py` | 12 tests nuevos |
+| `frontend/html/admin.html` | Botón **Facturas** al lado de *Exportar Excel* |
+| `frontend/html/facturas.html`, `frontend/js/facturas.js` | **Nuevos**: pantalla de facturación |
+| `frontend/css/styles.css` | **Nuevo**: tema oscuro (`body.tema-oscuro`), por ahora solo lo usa `facturas.html` |
+| `.md/documentacion_de_la_api.md`, `.md/guia_de_desarrollo.md`, `.md/arquitectura_del_sistema.md` | Endpoint, `ALTER TABLE` y la nueva pantalla |
+
+### Cómo funciona
+
+**Vista 1, resumen por proveedor** (al entrar, sin proveedor elegido):
+
+| Cartel | Cuándo |
+|---|---|
+| Rojo: `N sin facturar` | Tiene pesadas cerradas sin facturar |
+| Azul: `Todo facturado` | Todas sus pesadas cerradas están facturadas |
+| Gris: `Sin pesadas` / `Sin pesadas cerradas` | No tiene pesadas, o solo tiene abiertas (no hay nada para facturar todavía) |
+
+La columna *Pesadas* indica cuántas tiene y cuántas siguen abiertas. Escribir en el buscador filtra la lista; hacer clic en un proveedor abre su detalle.
+
+**Vista 2, detalle del proveedor** (al hacer clic o al escribir su nombre completo): N° de ticket, fecha, patente, producto, peso neto y un cartel por pesada: azul *Facturado* o rojo *No facturado* (las abiertas además llevan un cartel gris *Abierto*). Arriba, un resumen: cantidad de pesadas, cerradas sin facturar y neto pendiente. Si hay fechas *Desde/Hasta*, se filtra por ese rango.
+
+**Facturar**: con un proveedor elegido y las dos fechas cargadas (*Desde* ≤ *Hasta*), se habilita **Marcar como Facturado**. Pide confirmación (con la cantidad de pesadas pendientes), llama a `PATCH /tickets/facturar` y vuelve a pedir todo a la API: los carteles pasan de rojo a azul y el resumen se actualiza.
+
+**Deshacer**: si se facturó algo por error, con el mismo proveedor y rango, **Desmarcar facturación** (también con confirmación) manda `"facturado": false` al mismo endpoint y esas pesadas vuelven a rojo. Para deshacer una sola pesada, elegir *Desde* y *Hasta* en su día.
+
+### Decisiones técnicas
+
+- **Solo se facturan tickets cerrados** (la "regla recomendada" del ticket): un camión que todavía está adentro no tiene peso neto. Esa pesada sigue en rojo hasta que se cierre y se facture en otro lote.
+- **Un solo `UPDATE` en la base** con todas las condiciones (proveedor, rango, cerrado, no facturado). Así es atómico y repetirlo no hace nada (`actualizados: 0`).
+- **`fecha` es solo fecha** (sin hora), así que el rango incluye los dos días completos sin tener que armar 00:00:00 / 23:59:59.
+- **`facturado` no se puede enviar** al crear ni al editar (`extra="forbid"`): solo se cambia con la facturación por lote. Editar una pesada facturada no la desmarca.
+- **Proveedor inexistente → `404`**, igual que al editar un ticket (`ReferenciaNoEncontradaError`).
+- **Buscador con `<datalist>`**: se puede escribir para filtrar o elegir de la lista; si lo escrito coincide con un proveedor (sin importar mayúsculas), se abre su detalle.
+- **Sin `innerHTML`**: tablas, carteles y opciones con `createElement` y `textContent`.
+- **Tema oscuro propio de Facturas** en `frontend/css/styles.css`: fondo `#121413`, tarjetas `#1d201f` con borde `#2d3230` y radio de 14px, inputs oscuros con foco verde y `color-scheme: dark` (calendario oscuro). Carteles: azul *Facturado*, rojo *No facturado* y gris oscuro `#2b302e` para los neutros. Todos los estilos cuelgan de `body.tema-oscuro`, así que no afectan a `admin.html` ni a `cliente.html`, que siguen claros.
+
+### Verificación
+
+- 153 tests pasan (12 nuevos).
+- En el navegador, con un proveedor de prueba (borrado después): el resumen marca *3 sin facturar*; con el rango de noviembre el detalle muestra 3 pesadas (la de octubre queda afuera); al confirmar, las 2 cerradas pasan a azul y la abierta sigue en rojo; el resumen pasa a *1 sin facturar* (la de octubre). Un cliente recibe `403` del endpoint y, si abre `facturas.html`, vuelve al login.
+
+### Pendientes conocidos
+
+- No se guarda cuándo ni quién facturó, ni un número de factura.
+- El panel del cliente todavía no muestra el estado de facturación de sus pesadas.

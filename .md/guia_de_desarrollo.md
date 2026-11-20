@@ -69,6 +69,14 @@ Desde AGROPESO-022 el nombre del proveedor es único. En una base existente hay 
 sudo mysql AgroPeso -e "ALTER TABLE suppliers ADD CONSTRAINT uq_suppliers_name UNIQUE (name);"
 ```
 
+Desde AGROPESO-029 cada ticket tiene el campo `facturado`. Hay que agregar la columna **en la base local y en la de Railway antes de publicar** (si la API nueva arranca sin la columna, todas las consultas de tickets fallan con `500`):
+
+```sql
+ALTER TABLE tickets ADD COLUMN facturado BOOLEAN NOT NULL DEFAULT FALSE;
+```
+
+Los tickets que ya existían quedan como *no facturados*.
+
 *A futuro, se implementarán migraciones con Alembic para evitar el uso de `ALTER TABLE` manual.*
 
 ---

@@ -3,7 +3,7 @@ from datetime import date
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, func
+from sqlalchemy import Boolean, Column, Integer, String, Date, ForeignKey, func
 from sqlalchemy.orm import relationship
 
 from config.database import Base
@@ -25,6 +25,7 @@ class Ticket:  # Entidad pura
     numero_ticket: Optional[int] = None
     estado: EstadoTicket = EstadoTicket.ABIERTO
     id: Optional[int] = None
+    facturado: bool = False  # todo ticket nace sin facturar
 
     @property
     def peso_neto(self) -> Optional[int]:
@@ -51,6 +52,7 @@ class TicketDB(Base):  # Tabla de MySQL
     peso_neto = Column(Integer, nullable=True)
     estado = Column(String(10), nullable=False, default="abierto", server_default="abierto")
     numero_ticket = Column(Integer, nullable=True, unique=True)
+    facturado = Column(Boolean, nullable=False, default=False, server_default="0")
 
     supplier = relationship("Supplier", back_populates="tickets")
     product = relationship("Product", back_populates="tickets")
