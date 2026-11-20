@@ -143,6 +143,9 @@
         <button id="btn-producto" type="button" class="btn-accion w3-button w3-green w3-round-xxlarge">
           <b>Cargar producto</b><span class="flecha w3-circle w3-white w3-text-green">›</span>
         </button>
+        <button id="btn-cliente" type="button" class="btn-accion w3-button w3-green w3-round-xxlarge">
+          <b>Cargar cliente</b><span class="flecha w3-circle w3-white w3-text-green">›</span>
+        </button>
       </div>
 
       <div class="tarjeta-stat w3-light-grey w3-round-xlarge w3-padding-large">
@@ -203,6 +206,39 @@
         <div class="w3-right">
           <button type="button" id="modal-cancelar" class="w3-button w3-round w3-light-grey">Cancelar</button>
           <button type="submit" id="modal-aceptar" class="w3-button w3-round w3-green">Aceptar</button>
+        </div>
+        <div class="w3-clear"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de alta de cliente (varios campos) -->
+  <div id="modal-cliente" class="w3-modal">
+    <div class="w3-modal-content w3-card-4 w3-animate-top" style="max-width: 420px;">
+      <header class="w3-container w3-green">
+        <h3>Cargar cliente</h3>
+      </header>
+      <form id="form-cliente" class="w3-container w3-padding-16" novalidate>
+        <p>
+          <label for="cliente-username" class="w3-text-grey">Usuario</label>
+          <input id="cliente-username" class="w3-input w3-border w3-round" maxlength="50" autocomplete="off">
+        </p>
+        <p>
+          <label for="cliente-password" class="w3-text-grey">Contraseña <small>(mínimo 6 caracteres)</small></label>
+          <input id="cliente-password" type="password" class="w3-input w3-border w3-round" autocomplete="new-password">
+        </p>
+        <p>
+          <label for="cliente-password2" class="w3-text-grey">Repetir contraseña</label>
+          <input id="cliente-password2" type="password" class="w3-input w3-border w3-round" autocomplete="new-password">
+        </p>
+        <p>
+          <label for="cliente-proveedor" class="w3-text-grey">Proveedor</label>
+          <select id="cliente-proveedor" class="w3-select w3-border w3-round"></select>
+        </p>
+        <p id="cliente-error" class="w3-text-red w3-small" style="display: none;"></p>
+        <div class="w3-right">
+          <button type="button" id="cliente-cancelar" class="w3-button w3-round w3-light-grey">Cancelar</button>
+          <button type="submit" id="cliente-guardar" class="w3-button w3-round w3-green">Crear cliente</button>
         </div>
         <div class="w3-clear"></div>
       </form>

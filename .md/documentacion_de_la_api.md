@@ -50,7 +50,7 @@
 | **200 / 201** | La operación se realizó correctamente. |
 | **400** | Violación de regla de negocio (ej: bruto no es mayor a la tara, ticket ya cerrado, `supplier_id` o `product_id` inexistente). |
 | **404** | No existe el ticket solicitado. |
-| **409** | Ya existe un proveedor o producto con ese nombre (sin distinguir mayúsculas). |
+| **409** | Ya existe un proveedor, producto o usuario con ese nombre (sin distinguir mayúsculas). |
 | **422** | El JSON no cumple el formato (tipos incorrectos, valores negativos, filtro de estado inválido). |
 | **500** | Error interno (ej: `numero_ticket` repetido, rechazado por MySQL). |
 
@@ -138,6 +138,48 @@ Todos los endpoints de `/tickets` requieren enviar el token JWT en el encabezado
 | `ProductResponse` | `name` | texto | Nombre del producto |
 
 Al crear un ticket, `product_id` es opcional; si se envía y no existe, la API responde 400.
+
+---
+
+## Usuarios
+
+#### Endpoints
+
+| Método | Ruta | Descripción | Respuesta |
+|---|---|---|---|
+| POST | `/users/` | Da de alta un usuario con rol `cliente` asociado a un proveedor | `UserResponse` (201) |
+
+#### Autorización y Permisos en Usuarios
+
+| Endpoint | Admin | Cliente | Sin token |
+|---|---|---|---|
+| `POST /users/` | ✅ | 403 | 401 |
+
+#### Esquema de entrada `ClienteCreate`
+
+| Campo | Tipo | Obligatorio | Regla |
+|---|---|---|---|
+| `username` | texto | Sí | Sin espacios en los extremos, entre 3 y 50 caracteres. Único (sin distinguir mayúsculas) |
+| `password` | texto | Sí | Mínimo 6 caracteres y máximo 72 bytes (límite de bcrypt). **No se recorta** |
+| `supplier_id` | entero | Sí | Mayor a 0 y debe existir |
+
+El rol no se envía: el servidor siempre crea un `cliente` (`extra="forbid"`, mandar `rol` da 422). La respuesta (`UserResponse`) devuelve `id`, `username`, `rol` y `supplier_id`; nunca la contraseña ni su hash.
+
+| Código | Cuándo ocurre |
+|---|---|
+| 201 | Cliente creado |
+| 400 | `supplier_id` inexistente |
+| 409 | Ya existe un usuario con ese nombre |
+| 422 | Formato inválido (usuario corto/largo, contraseña corta o de más de 72 bytes, campos extra) |
+
+**Ejemplo (`POST /users/`):**
+```json
+{
+  "username": "berg",
+  "password": "clave123",
+  "supplier_id": 1
+}
+```
 
 ---
 

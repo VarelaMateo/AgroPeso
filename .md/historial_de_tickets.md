@@ -394,7 +394,7 @@ El frontend ahora tiene pantalla de inicio de sesión. Guarda el token JWT, redi
 | `frontend/html/login.html` | Nuevo: formulario de usuario y contraseña |
 | `frontend/js/auth.js` | Nuevo: manejo de sesión compartido por todas las pantallas |
 | `routers/supplier_router.py` | `GET` exige token; `POST` solo admin |
-| `crear_cliente.py` | Script para crear usuarios con rol cliente asociados a un proveedor |
+| `crear_cliente.py` | Script para crear usuarios con rol cliente asociados a un proveedor (eliminado en AGROPESO-024: reemplazado por `POST /users/`) |
 
 ### Cómo funciona
 
@@ -626,3 +626,57 @@ Las tablas de tickets ahora muestran el producto de cada pesada, tanto en el pan
 2. Registrar una pesada con producto y otra sin producto desde el panel del admin.
 3. Buscar ambos tickets en el admin: uno muestra el nombre del producto y el otro `—`.
 4. Entrar como cliente de ese proveedor: las dos tablas muestran la columna *Producto*.
+
+---
+
+## AGROPESO-024: Gestión de cuentas de clientes desde la API (`POST /users/`)
+
+El administrador ya puede dar de alta usuarios con rol `cliente` desde el panel, sin usar el script `crear_cliente.py`.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `schemas/user_schema.py` | Nuevo esquema `ClienteCreate` (`username`, `password`, `supplier_id`) |
+| `services/user_service.py` | Nuevo: `UserService.crear_cliente` |
+| `routers/user_router.py` | Nuevo: `POST /users/` (solo admin) |
+| `repository/user_repository.py` | `create_user` traduce el `IntegrityError` a `UsuarioDuplicadoError` |
+| `utils/exceptions.py` | Nueva excepción `UsuarioDuplicadoError` |
+| `main.py` | Registra el router de usuarios |
+| `crear_cliente.py` | **Eliminado**: reemplazado por el endpoint (`crear_admin.py` se mantiene para el primer admin) |
+| `frontend/html/admin.html` | Botón **Cargar cliente** debajo de las acciones y modal de alta con varios campos |
+| `frontend/js/admin.js` | Lógica del modal: validación, envío y errores dentro del modal |
+| `tests/test_users.py`, `tests/test_endpoints.py` | Tests del esquema, servicio, repositorio y endpoint (incluye login del cliente creado) |
+
+### Cómo funciona
+
+1. **Cargar cliente** abre un modal con usuario, contraseña, repetir contraseña y proveedor (los mismos que el formulario de tickets).
+2. El navegador valida largo del usuario, contraseña mínima, límite de 72 bytes, coincidencia y proveedor elegido.
+3. Se envía `POST /users/`. El servicio:
+   - rechaza el usuario si ya existe (409),
+   - rechaza el proveedor si no existe (400),
+   - guarda la contraseña con hash bcrypt y rol `cliente`.
+4. Si hay un error, se muestra **dentro del modal** sin borrar lo escrito. Si sale bien, el modal se cierra, se limpia el formulario y aparece el mensaje verde.
+
+### Decisiones técnicas
+
+- **El endpoint solo crea clientes**: el rol lo fija el servidor y `ClienteCreate` no lo acepta (`extra="forbid"`). Así no se puede crear un admin desde la pantalla, ni por error ni manipulando la petición.
+- **La contraseña no se recorta** (`UserCreate` sí usa `str_strip_whitespace`): el login no recorta, así que una clave con un espacio al final quedaría inutilizable.
+- **Límite de 72 bytes**: es lo máximo que bcrypt procesa; se valida en el esquema y en el navegador, igual que hacía el script.
+- **Usuario único sin distinguir mayúsculas**: la colación de MariaDB ya trata `Berg` y `berg` como iguales, tanto en el login como en la restricción `UNIQUE`.
+- **Modal propio**: el modal genérico tiene un solo campo; este tiene cuatro y muestra los errores sin cerrarse. Al cerrar se hace `reset()` para no dejar la contraseña en el DOM.
+
+### Cómo probarlo
+
+1. Forzar la recarga de `admin.html` (`Ctrl + Shift + R`).
+2. **Cargar cliente** → enviar vacío: aparece el error de usuario.
+3. Contraseñas distintas: "Las contraseñas no coinciden".
+4. Completar todo bien: mensaje verde "Cliente ... creado para ...".
+5. Repetir el mismo usuario en mayúsculas: el modal muestra el 409.
+6. Cerrar sesión y entrar con el cliente nuevo: abre `cliente.html` con los tickets de su proveedor.
+7. Ejecutar `pytest`.
+
+### Pendientes conocidos
+
+- No hay listado, edición, baja ni cambio de contraseña de clientes.
+- El primer admin se sigue creando con `crear_admin.py`.
