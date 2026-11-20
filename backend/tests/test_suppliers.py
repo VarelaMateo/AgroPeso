@@ -5,6 +5,7 @@ from models.suppliers import SupplierEntity
 from repository.supplier_repository import SupplierRepository
 from schemas.supplier_schema import SupplierCreate, SupplierResponse
 from services.supplier_service import SupplierService
+from models.user_model import Rol, UsuarioActual
 
 
 # --- Esquemas ---
@@ -47,10 +48,18 @@ class RepositorioEnMemoria:
 def test_servicio_crea_y_lista_proveedores():
     service = SupplierService(RepositorioEnMemoria())
     creado = service.crear_proveedor(SupplierEntity(name="Berg"))
+    admin = UsuarioActual(username="admin_test", rol=Rol.ADMIN)
     assert creado.id == 1
-    assert service.obtener_todos_los_proveedores() == [creado]
+    assert service.obtener_todos_los_proveedores(admin) == [creado]
 
-
+def test_cliente_solo_ve_su_proveedor():
+    service = SupplierService(RepositorioEnMemoria())
+    service.crear_proveedor(SupplierEntity(name="Berg"))
+    service.crear_proveedor(SupplierEntity(name="Otro"))
+    cliente = UsuarioActual(username="c", rol=Rol.CLIENTE, supplier_id=1)
+    visibles = service.obtener_todos_los_proveedores(cliente)
+    assert [s.id for s in visibles] == [1]
+    
 # --- Repositorio (base real, se deshace con rollback) ---
 
 def test_repositorio_crea_y_lista(session):
