@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgroPeso - Mis pesadas</title>
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* CSS propio: solo lo que W3.CSS no puede hacer (degradados, fuente y detalles del diseño) */
+    :root {
+      --azul-oscuro: #0a3fa8;   /* cambiá estos dos para ajustar el azul */
+      --azul-claro: #3d8bff;
+      --gris-panel: #f5f5f5;
+    }
+
+    body, h1, h2, h3, table, input, button {
+      font-family: "Poppins", sans-serif;
+    }
+
+    /* Barra superior y paneles */
+    .barra-superior {
+      background: var(--gris-panel);
+      border-radius: 40px;
+      padding: 12px 20px;
+    }
+
+    /* Alinea verticalmente las tres zonas de la barra */
+    .barra-superior > .w3-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .nombre-proveedor {
+      font-size: 26px;
+      font-weight: 600;
+    }
+
+    .panel-tabla {
+      background: var(--gris-panel);
+      border-radius: 20px;
+      padding: 16px;
+      height: 360px;
+      overflow: auto;
+    }
+
+    .panel-tabla th { color: var(--azul-oscuro); }
+
+    /* Buscador: mismo color de fondo que la barra, con borde */
+    .buscador {
+      width: 100%;
+      background: transparent;
+      border: 1px solid #c4c4c4;
+      border-radius: 999px;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 15px;
+    }
+    .buscador:focus {
+      outline: none;
+      border-color: var(--azul-oscuro);
+    }
+
+    .btn-buscar {
+      width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      color: #fff;
+      background: linear-gradient(160deg, var(--azul-oscuro), var(--azul-claro));
+    }
+
+    .btn-salir {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    /* Tarjetas de estadísticas */
+    .tarjeta {
+      border-radius: 18px;
+      padding: 16px;
+      min-height: 130px;
+    }
+    .tarjeta-azul {
+      color: #fff;
+      background: linear-gradient(160deg, var(--azul-oscuro) 0%, var(--azul-claro) 100%);
+    }
+    .tarjeta-gris {
+      background: var(--gris-panel);
+    }
+    .tarjeta .numero {
+      font-size: 32px;
+      font-weight: 600;
+      margin: 8px 0 0;
+    }
+    .icono-circulo {
+      width: 36px;
+      height: 36px;
+      line-height: 36px;
+      text-align: center;
+      border-radius: 50%;
+      float: right;
+    }
+
+    /* Etiqueta de estado "cerrado" (la usa cliente.js) */
+    .estado-cerrado {
+      background: var(--azul-oscuro);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <main class="w3-padding">
+
+    <!-- Barra superior -->
+    <header class="barra-superior">
+      <div class="w3-row">
+        <div class="w3-col m3 s12 w3-padding w3-center">
+          <b id="nombre-proveedor" class="nombre-proveedor">Cargando...</b>
+        </div>
+
+        <div class="w3-col m5 s12">
+          <div class="w3-row">
+            <div class="w3-col" style="width: 56px;">
+              <button id="btn-buscar" type="button" class="btn-buscar" aria-label="Buscar">🔍</button>
+            </div>
+            <div class="w3-rest">
+              <input id="buscador" class="buscador" type="search"
+                     placeholder="buscar por fecha o patente" autocomplete="off">
+            </div>
+          </div>
+        </div>
+
+        <div class="w3-col m4 s12 w3-right-align w3-padding">
+          <button id="btn-salir" type="button" class="btn-salir">cerrar sesión</button>
+          <br>
+          <span id="fecha-hora" class="w3-small w3-text-grey"></span>
+        </div>
+      </div>
+    </header>
+
+    <h1 class="w3-xxxlarge"><b>Tickets</b></h1>
+
+    <!-- Tablas (ocupan todo el ancho) -->
+    <div class="w3-row-padding">
+
+      <section class="w3-col m7 w3-margin-bottom">
+        <h2 class="w3-xlarge"><b>Todos los tickets</b></h2>
+        <div class="panel-tabla">
+          <table class="w3-table w3-hoverable">
+            <thead>
+              <tr>
+                <th>ID</th><th>Fecha</th><th>Chofer</th><th>Patente</th>
+                <th>Tara</th><th>Bruto</th><th>Neto</th><th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-todos">
+              <tr><td colspan="8" class="w3-center">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="w3-col m5 w3-margin-bottom">
+        <h2 class="w3-xlarge"><b>Tickets del mes</b></h2>
+        <div class="panel-tabla">
+          <table class="w3-table w3-hoverable">
+            <thead>
+              <tr>
+                <th>ID</th><th>Fecha</th><th>Patente</th><th>Neto</th><th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-mes">
+              <tr><td colspan="5" class="w3-center">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Tarjetas de estadísticas -->
+    <section class="w3-content w3-row-padding w3-margin-top w3-margin-bottom" style="max-width: 860px;">
+
+      <div class="w3-third w3-margin-bottom">
+        <div class="tarjeta tarjeta-azul">
+          <div class="icono-circulo w3-white">🚚</div>
+          <span class="w3-small">Total de pesadas</span>
+          <p class="numero" id="stat-total">—</p>
+          <span id="stat-variacion" class="w3-tiny"></span>
+        </div>
+      </div>
+
+      <div class="w3-third w3-margin-bottom">
+        <div class="tarjeta tarjeta-gris">
+          <div class="icono-circulo w3-black">⏳</div>
+          <span class="w3-small w3-text-grey">Pesadas abiertas</span>
+          <p class="numero" id="stat-abiertas">—</p>
+        </div>
+      </div>
+
+      <div class="w3-third w3-margin-bottom">
+        <div class="tarjeta tarjeta-azul">
+          <span class="w3-small">Peso neto promedio del mes</span>
+          <p class="numero" id="stat-neto-promedio">—</p>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/cliente.js"></script>
+</body>
+</html>

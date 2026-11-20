@@ -15,7 +15,7 @@ router = APIRouter(prefix = "/suppliers", tags=["Suppliers"])
 @router.get("/", response_model = list[SupplierResponse])
 def listar_proveedores(db: Session = Depends(get_db), user: UsuarioActual = Depends(get_current_user)):
     service = SupplierService(SupplierRepository(db))
-    return service.obtener_todos_los_proveedores()
+    return service.obtener_todos_los_proveedores(user)
 
 @router.post("/",  response_model = SupplierResponse, status_code = 201)
 def crear_proveedor(datos: SupplierCreate, db: Session = Depends(get_db), user: UsuarioActual = Depends(get_current_user)):
