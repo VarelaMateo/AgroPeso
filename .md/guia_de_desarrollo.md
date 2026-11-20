@@ -94,6 +94,7 @@ pytest
 * `test_schemas.py`: Valida los esquemas de Pydantic.
 * `test_server.py`: Valida las reglas de negocio en memoria.
 * `test_endpoints.py`: Verifica con `TestClient` los 401 (sin token o token inválido) y los 403 (cliente intentando escribir), sin base de datos. Los tests de 409/400 de proveedores sí usan la base real (con rollback).
+* `test_backup.py`: Genera el SQL con un repositorio falso (escapado, `NULL`, fechas, orden de tablas), el guardado diario en una carpeta temporal y el endpoint (200 con `Content-Disposition` para admin, 403 cliente, 401 sin token).
 * `test_repository.py`: Prueba contra la base real. Requiere MariaDB encendido; usa fixtures para deshacer los cambios (no deja basura en la BD).
 
 ---
@@ -130,3 +131,30 @@ Desde AGROPESO-025 los paneles de admin y cliente filtran y exportan **en el nav
 1. Forzar la recarga (`Ctrl + Shift + R`). Si un cambio en `exportar.js` no se ve, cerrar la pestaña y volver a abrirla: el navegador puede seguir usando la versión en caché.
 2. Exportar y abrir el `.csv` con doble clic en Excel: las columnas deben quedar separadas y la fila `TOTALES` al final.
 3. Si Excel muestra todo en una sola columna, la configuración regional usa `,` como separador de listas: abrirlo con *Datos → Desde texto/CSV* y elegir `;`.
+
+---
+
+## Copias de seguridad de la base de datos
+
+Desde AGROPESO-027 hay dos respaldos, los dos con el mismo formato (`agropeso_backup_YYYY-MM-DD.sql`), generados por `BackupService` con SQLAlchemy (no hace falta `mysqldump` en el `PATH`).
+
+| Respaldo | Dónde queda | Cuándo |
+|---|---|---|
+| **Automático en el servidor** | `backend/backups/` (o la carpeta de la variable `BACKUP_DIR`) | Al arrancar la API y después cada 1 hora se fija si existe el archivo del día; si falta, lo crea |
+| **Descarga del panel admin** | Carpeta de descargas del navegador | Solo cuando el admin toca **Descargar Backup DB** |
+
+* `backend/backups/` está en `.gitignore`: los backups **no se suben** al repositorio (tienen los hashes de las contraseñas).
+* El panel **nunca descarga solo**: si lo hiciera, bajaría un backup en cada PC donde se abra el panel de admin.
+* En Railway el disco del contenedor **se borra en cada deploy o reinicio**: el backup automático del servidor sirve para el entorno local; en producción el respaldo real es el que descarga el admin (o los backups propios del servicio de MySQL de Railway).
+
+### Restaurar un backup
+
+El archivo tiene solo los datos (`INSERT`), no la estructura. Sobre una base **vacía**:
+
+```powershell
+cd backend
+python create_table.py
+& "C:\Program Files\MariaDB 13.0\bin\mysql.exe" -u root -p AgroPeso -e "source ruta/al/agropeso_backup_2026-11-20.sql"
+```
+
+Si la base ya tiene datos, los `INSERT` fallan por `id` duplicado: hay que vaciar las tablas antes (o restaurar en una base nueva).

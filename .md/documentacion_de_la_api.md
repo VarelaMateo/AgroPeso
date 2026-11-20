@@ -212,6 +212,45 @@ El rol no se envía: el servidor siempre crea un `cliente` (`extra="forbid"`, ma
 
 ---
 
+## Copia de seguridad (Backup)
+
+#### Endpoints
+
+| Método | Ruta | Descripción | Respuesta |
+|---|---|---|---|
+| GET | `/backup/descargar` | Descarga un volcado completo de la base en SQL (`INSERT INTO ...`) | Archivo `.sql` (200) |
+
+#### Autorización y Permisos en Backup
+
+| Endpoint | Admin | Cliente | Sin token |
+|---|---|---|---|
+| `GET /backup/descargar` | ✅ | 403 | 401 |
+
+#### Respuesta
+
+* `Content-Type: application/octet-stream`
+* `Content-Disposition: attachment; filename="agropeso_backup_YYYY-MM-DD.sql"` (fecha del servidor). La API lo expone por CORS (`expose_headers`) para que el panel lea el nombre.
+* Contenido, en este orden para respetar las claves foráneas: `suppliers`, `products`, `users`, `tickets`, cada tabla ordenada por `id`. Empieza con comentarios de metadatos:
+
+```sql
+-- AgroPeso: copia de seguridad completa
+-- fecha_generacion: 2026-11-20T19:04:08
+-- total_proveedores: 6
+-- total_productos: 2
+-- total_usuarios: 3
+-- total_tickets: 11
+...
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+INSERT INTO suppliers (id, name, cuit, phone, fecha_alta) VALUES (1, 'Berg', NULL, NULL, '2026-11-01');
+...
+SET FOREIGN_KEY_CHECKS = 1;
+```
+
+> ⚠️ Incluye los `password_hash` de los usuarios (hacen falta para restaurar los accesos). El archivo debe guardarse en un lugar seguro.
+
+---
+
 ## Autenticación (Auth)
 
 #### Endpoints
