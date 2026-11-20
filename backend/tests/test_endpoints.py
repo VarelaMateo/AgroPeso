@@ -22,6 +22,8 @@ def test_sin_token_responde_401():
     assert client.get("/tickets/").status_code == 401
     assert client.post("/tickets/", json=TICKET).status_code == 401
     assert client.get("/suppliers/").status_code == 401
+    assert client.get("/products/").status_code == 401
+    assert client.post("/products/", json={"name": "Soja"}).status_code == 401
 
 
 def test_token_invalido_responde_401():
@@ -42,6 +44,11 @@ def test_cliente_no_puede_cerrar_ticket():
 def test_cliente_no_puede_crear_proveedor():
     como(UsuarioActual(username="c", rol=Rol.CLIENTE, supplier_id=1))
     assert client.post("/suppliers/", json={"name": "Berg"}).status_code == 403
+
+
+def test_cliente_no_puede_crear_producto():
+    como(UsuarioActual(username="c", rol=Rol.CLIENTE, supplier_id=1))
+    assert client.post("/products/", json={"name": "Soja"}).status_code == 403
 
 
 # --- Validaciones de proveedores (base real, se deshace con rollback) ---
@@ -75,3 +82,46 @@ def test_ticket_con_proveedor_existente_responde_201(session, proveedor):
     r = client.post("/tickets/", json={**TICKET, "supplier_id": proveedor.id})
     assert r.status_code == 201
     assert r.json()["estado"] == "abierto"
+
+
+# --- Productos (base real, se deshace con rollback) ---
+
+def test_admin_crea_y_lista_productos(session):
+    como(ADMIN)
+    usar_sesion(session)
+    r = client.post("/products/", json={"name": "  Maiz Test  "})
+    assert r.status_code == 201
+    assert r.json()["name"] == "Maiz Test"
+    assert "Maiz Test" in [p["name"] for p in client.get("/products/").json()]
+
+
+def test_cliente_puede_listar_productos(session, producto):
+    como(UsuarioActual(username="c", rol=Rol.CLIENTE, supplier_id=1))
+    usar_sesion(session)
+    r = client.get("/products/")
+    assert r.status_code == 200
+    assert producto.id in [p["id"] for p in r.json()]
+
+
+def test_producto_duplicado_responde_409(session, producto):
+    como(ADMIN)
+    usar_sesion(session)
+    r = client.post("/products/", json={"name": "PRODUCTO DE PRUEBA"})
+    assert r.status_code == 409
+    assert "Ya existe" in r.json()["detail"]
+
+
+def test_ticket_con_producto_inexistente_responde_400(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    r = client.post("/tickets/", json={**TICKET, "supplier_id": proveedor.id, "product_id": 999999})
+    assert r.status_code == 400
+    assert "producto" in r.json()["detail"]
+
+
+def test_ticket_con_producto_existente_responde_201(session, proveedor, producto):
+    como(ADMIN)
+    usar_sesion(session)
+    r = client.post("/tickets/", json={**TICKET, "supplier_id": proveedor.id, "product_id": producto.id})
+    assert r.status_code == 201
+    assert r.json()["product_id"] == producto.id

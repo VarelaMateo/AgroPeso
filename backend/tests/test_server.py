@@ -2,6 +2,7 @@ from datetime import date
 
 import pytest
 
+from models.products import ProductEntity
 from models.suppliers import SupplierEntity
 from models.ticket_model import EstadoTicket, Ticket
 from services.ticket_service import TicketService
@@ -45,13 +46,21 @@ class ProveedoresEnMemoria:
         return self.proveedores.get(supplier_id)
 
 
+class ProductosEnMemoria:
+    def __init__(self):
+        self.productos = {1: ProductEntity(name="Soja", id=1)}
+
+    def get_product_by_id(self, product_id):
+        return self.productos.get(product_id)
+
+
 def crear_ticket(tara, bruto, supplier_id=1):
     return Ticket(date.today(), "Ivan Derio", "HKN279", tara, bruto, supplier_id)
 
 
 @pytest.fixture
 def service():
-    return TicketService(RepositorioEnMemoria(), ProveedoresEnMemoria())
+    return TicketService(RepositorioEnMemoria(), ProveedoresEnMemoria(), ProductosEnMemoria())
 
 
 # --- Entidad ---
@@ -95,6 +104,20 @@ def test_registrar_con_bruto_igual_a_la_tara_lanza_error(service):
 def test_registrar_con_proveedor_inexistente_lanza_error_y_no_guarda(service):
     with pytest.raises(ReglaNegocioError, match="proveedor"):
         service.registrar_pesada(crear_ticket(15160, None, supplier_id=999))
+    assert service.obtener_todos_los_tickets(ADMIN) == []
+
+
+def test_registrar_con_producto_existente(service):
+    ticket = crear_ticket(15160, None)
+    ticket.product_id = 1
+    assert service.registrar_pesada(ticket).product_id == 1
+
+
+def test_registrar_con_producto_inexistente_lanza_error_y_no_guarda(service):
+    ticket = crear_ticket(15160, None)
+    ticket.product_id = 999
+    with pytest.raises(ReglaNegocioError, match="producto"):
+        service.registrar_pesada(ticket)
     assert service.obtener_todos_los_tickets(ADMIN) == []
 
 
