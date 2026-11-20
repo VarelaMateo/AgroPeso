@@ -1,4 +1,4 @@
-const API = "http://127.0.0.1:8000";
+const API = API_BASE; // definido en auth.js
 const API_TICKETS = `${API}/tickets/`;
 const API_PROVEEDORES = `${API}/suppliers/`;
 const API_PRODUCTOS = `${API}/products/`;

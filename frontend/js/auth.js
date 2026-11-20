@@ -1,7 +1,11 @@
 // auth.js: manejo de sesión (JWT) compartido por todas las pantallas.
 // En login.html además maneja el envío del formulario.
 
-const API_BASE = "http://127.0.0.1:8000";
+// En local (Live Server o archivo abierto) usa la API local; publicado, la de Railway.
+const ES_LOCAL = ["localhost", "127.0.0.1", ""].includes(location.hostname);
+const API_BASE = ES_LOCAL
+    ? "http://127.0.0.1:8000"
+    : "https://agropeso-production.up.railway.app";
 const TOKEN_KEY = "access_token";
 const PAGINAS_POR_ROL = {
     admin: "admin.html",
