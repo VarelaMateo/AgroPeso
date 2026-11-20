@@ -25,7 +25,7 @@
 | `product_id` | entero | No | Mayor a 0 |
 | `transporte` | texto | No | Por defecto `"Equipo"`, máximo 50 caracteres |
 | `numero_ticket` | entero | No | Único en la base de datos |
-| `fecha` | fecha | No | Por defecto, la fecha de hoy |
+| `fecha` | fecha | No | Por defecto, la fecha de hoy (del servidor). No puede ser posterior a hoy (`400`) |
 
 *Nota: `TicketResponse` (lo que sale) incluye los mismos campos, más `id`, `estado` y `peso_neto` (calculado).*
 
@@ -41,6 +41,7 @@ Reemplaza todos los campos editables: hay que mandar el ticket completo, no solo
 | `peso_bruto` | entero | No | Mayor a 0. `null` = el ticket queda abierto (no se permite en un ticket cerrado) |
 | `supplier_id` | entero | Sí | Debe existir (si no, `404`) |
 | `product_id` | entero | No | Si viene, debe existir (si no, `404`) |
+| `fecha` | fecha | No | `YYYY-MM-DD`. Si no se manda, se conserva la que tenía. No puede ser posterior a hoy (`400`) |
 
 ---
 
@@ -63,7 +64,7 @@ Reemplaza todos los campos editables: hay que mandar el ticket completo, no solo
 | Código | Cuándo ocurre |
 |---|---|
 | **200 / 201** | La operación se realizó correctamente. |
-| **400** | Violación de regla de negocio (ej: bruto no es mayor a la tara, ticket ya cerrado, `supplier_id` o `product_id` inexistente). |
+| **400** | Violación de regla de negocio (ej: bruto no es mayor a la tara, ticket ya cerrado, fecha posterior a hoy, `supplier_id` o `product_id` inexistente). |
 | **404** | No existe el ticket solicitado. Al editar un ticket, también si no existe el `supplier_id` o `product_id` enviado. |
 | **409** | Ya existe un proveedor, producto o usuario con ese nombre (sin distinguir mayúsculas). |
 | **422** | El JSON no cumple el formato (tipos incorrectos, valores negativos, filtro de estado inválido). |

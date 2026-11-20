@@ -858,3 +858,42 @@ El administrador puede descargar un volcado completo de la base (proveedores, pr
 
 - En Railway, `backend/backups/` se pierde en cada deploy: conviene activar los backups del servicio MySQL de Railway o subir los archivos a un almacenamiento externo.
 - No se borran los backups viejos de `backend/backups/` (uno por día): si crece mucho, agregar una limpieza (por ejemplo, conservar los últimos 30).
+
+---
+
+## AGROPESO-028: Fecha editable al crear y editar tickets
+
+El administrador puede elegir la fecha de un ticket para cargar pesadas de días anteriores. Si no la cambia, se usa la de hoy.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `backend/services/ticket_service.py` | **Nuevo** `validar_fecha` (no se aceptan fechas posteriores a hoy), usado al registrar y al editar; `editar_ticket` acepta `fecha` |
+| `backend/schemas/ticket_schema.py` | `TicketUpdate` suma `fecha` opcional (sin `fecha` se conserva la que tenía) |
+| `backend/tests/test_server.py`, `backend/tests/test_endpoints.py` | 9 tests nuevos |
+| `frontend/html/admin.html` | Campo **Fecha** al principio de *Nuevo ticket* y en el modal de edición |
+| `frontend/js/admin.js` | `prepararCampoFecha` (hoy por defecto y como máximo), envío de `fecha` al crear y editar, validación local |
+
+### Cómo funciona
+
+| Situación | Resultado |
+|---|---|
+| Nuevo ticket sin tocar la fecha | Se guarda con la fecha de hoy |
+| Nuevo ticket con una fecha anterior | Se guarda con esa fecha (por ejemplo, para cargar tickets viejos) |
+| Fecha posterior a hoy | El navegador no deja enviarla; si llega a la API, `400` |
+| Editar un ticket | El modal muestra su fecha y se puede cambiar |
+| `PUT` sin `fecha` | Se conserva la fecha que tenía el ticket |
+
+### Decisiones técnicas
+
+- **El formulario siempre manda la fecha local del navegador**: antes no la mandaba y la API usaba `date.today()` del servidor. En Railway el servidor está en UTC (3 horas adelante de Argentina), así que un ticket cargado después de las 21 hs quedaba con la fecha del día siguiente. Ahora queda la fecha que ve el operador.
+- **Sin fechas futuras**: una fecha futura casi siempre es un error de tipeo. Se valida en el servicio (contra la fecha del servidor, que en Argentina nunca está atrasada) y también en el navegador (atributo `max`).
+- **`fecha` opcional en `TicketUpdate`**: así un `PUT` sin fecha sigue funcionando como antes.
+
+### Cómo probarlo
+
+1. Admin: *Nuevo ticket* → la fecha ya está en hoy → registrar → aparece en *abiertos de hoy*.
+2. Cambiar la fecha a un día anterior → registrar → no aparece en *abiertos de hoy*; buscarlo con el filtro *Desde/Hasta* de ese día.
+3. **Editar** un ticket → cambiar la fecha → guardar → la tabla muestra la fecha nueva.
+4. El selector de fecha no deja elegir días posteriores a hoy.

@@ -125,6 +125,12 @@
         <h4 class="w3-center w3-text-light-green"><b>NUEVO TICKET</b></h4>
 
         <p>
+          <label for="fecha" class="w3-text-grey">Fecha <small>(hoy si no se cambia)</small></label>
+          <input class="w3-input w3-border w3-border-black w3-round-xxlarge w3-white w3-padding"
+                 type="date" id="fecha" name="fecha" required>
+        </p>
+
+        <p>
           <label for="chofer" class="w3-text-grey">Chofer</label>
           <input class="w3-input w3-border w3-border-black w3-round-xxlarge w3-white w3-padding"
                  type="text" id="chofer" name="chofer" maxlength="200" required>
@@ -294,6 +300,10 @@
         <h3 id="editar-titulo">Editar ticket</h3>
       </header>
       <form id="form-editar" class="w3-container w3-padding-16" novalidate>
+        <p>
+          <label for="editar-fecha" class="w3-text-grey">Fecha</label>
+          <input id="editar-fecha" type="date" class="w3-input w3-border w3-round">
+        </p>
         <p>
           <label for="editar-chofer" class="w3-text-grey">Chofer</label>
           <input id="editar-chofer" class="w3-input w3-border w3-round" maxlength="200" autocomplete="off">
