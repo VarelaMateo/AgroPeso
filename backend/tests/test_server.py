@@ -6,7 +6,7 @@ from models.products import ProductEntity
 from models.suppliers import SupplierEntity
 from models.ticket_model import EstadoTicket, Ticket
 from services.ticket_service import TicketService
-from utils.exceptions import ReglaNegocioError, TicketNoEncontradoError
+from utils.exceptions import ReferenciaNoEncontradaError, ReglaNegocioError, TicketNoEncontradoError
 from models.user_model import Rol, UsuarioActual
 
 ADMIN = UsuarioActual(username="admin_test", rol=Rol.ADMIN)
@@ -216,3 +216,65 @@ def test_cliente_no_puede_ver_ticket_de_otro_proveedor(service):
 def test_admin_puede_ver_cualquier_ticket_por_id(service):
     ticket = service.registrar_pesada(crear_ticket(15160, None, supplier_id=2))
     assert service.obtener_ticket_de_usuario(ticket.id, ADMIN).id == ticket.id
+
+# --- Editar ticket ---
+
+def editar(service, ticket_id, **cambios):
+    datos = {"chofer": "Ivan Derio", "patente": "HKN279", "peso_tara": 15160, "peso_bruto": None,
+             "supplier_id": 1, "product_id": None}
+    datos.update(cambios)
+    return service.editar_ticket(ticket_id, **datos)
+
+
+def test_editar_ticket_abierto_corrige_datos_y_sigue_abierto(service):
+    abierto = service.registrar_pesada(crear_ticket(15160, None))
+    editado = editar(service, abierto.id, chofer="Juan Perez", patente="AB123CD",
+                     peso_tara=15000, supplier_id=2, product_id=1)
+    assert editado.estado == EstadoTicket.ABIERTO
+    assert (editado.chofer, editado.patente, editado.peso_tara) == ("Juan Perez", "AB123CD", 15000)
+    assert (editado.supplier_id, editado.product_id) == (2, 1)
+    assert editado.peso_neto is None
+
+
+def test_editar_ticket_abierto_con_bruto_lo_cierra(service):
+    abierto = service.registrar_pesada(crear_ticket(15160, None))
+    editado = editar(service, abierto.id, peso_bruto=48260)
+    assert editado.estado == EstadoTicket.CERRADO
+    assert editado.peso_neto == 33100
+
+
+def test_editar_ticket_cerrado_recalcula_el_neto(service):
+    cerrado = service.registrar_pesada(crear_ticket(15160, 48260))
+    editado = editar(service, cerrado.id, peso_tara=16000, peso_bruto=50000)
+    assert editado.estado == EstadoTicket.CERRADO
+    assert editado.peso_neto == 34000
+
+
+@pytest.mark.parametrize("bruto", [15160, 10000])
+def test_editar_con_bruto_menor_o_igual_a_la_tara_lanza_error_y_no_cambia(service, bruto):
+    cerrado = service.registrar_pesada(crear_ticket(15160, 48260))
+    with pytest.raises(ReglaNegocioError):
+        editar(service, cerrado.id, chofer="Otro", peso_bruto=bruto)
+    guardado = service.obtener_ticket(cerrado.id)
+    assert (guardado.chofer, guardado.peso_bruto) == ("Ivan Derio", 48260)
+
+
+def test_editar_ticket_cerrado_sin_bruto_lanza_error(service):
+    cerrado = service.registrar_pesada(crear_ticket(15160, 48260))
+    with pytest.raises(ReglaNegocioError):
+        editar(service, cerrado.id, peso_bruto=None)
+    assert service.obtener_ticket(cerrado.id).estado == EstadoTicket.CERRADO
+
+
+def test_editar_ticket_inexistente_lanza_error(service):
+    with pytest.raises(TicketNoEncontradoError):
+        editar(service, 999)
+
+
+def test_editar_con_proveedor_o_producto_inexistente_lanza_error(service):
+    abierto = service.registrar_pesada(crear_ticket(15160, None))
+    with pytest.raises(ReferenciaNoEncontradaError):
+        editar(service, abierto.id, supplier_id=99)
+    with pytest.raises(ReferenciaNoEncontradaError):
+        editar(service, abierto.id, product_id=99)
+    assert service.obtener_ticket(abierto.id).supplier_id == 1

@@ -63,3 +63,28 @@ class TicketResponse(TicketBase):
     fecha: date
     estado: EstadoTicket
     peso_neto: Optional[int] = None
+
+class TicketUpdate(BaseModel):
+    """Lo que el administrador envía para editar un ticket (abierto o cerrado).
+    Reemplaza todos los campos editables: los que no se mandan quedan en su valor por defecto."""
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+        json_schema_extra={
+            "example": {
+                "chofer": "Ivan Derio",
+                "patente": "HKN279",
+                "peso_tara": 15160,
+                "peso_bruto": 48260,
+                "supplier_id": 1,
+                "product_id": None,
+            }
+        },
+    )
+
+    chofer: str = Field(min_length=1, max_length=200)
+    patente: Optional[str] = Field(default=None, max_length=11)
+    peso_tara: int = Field(gt=0)
+    peso_bruto: Optional[int] = Field(default=None, gt=0)  # None: el ticket sigue (o queda) abierto
+    supplier_id: int = Field(gt=0)
+    product_id: Optional[int] = Field(default=None, gt=0)

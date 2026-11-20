@@ -753,3 +753,57 @@ Al final: una fila vacía y la fila `TOTALES` con `X cerradas de Y`, la suma de 
 - El ticket no guarda la hora, solo la fecha: la columna *Fecha y Hora* muestra solo la fecha. Para incluir la hora hay que agregar un campo de fecha y hora en `tickets` (y migrar los datos existentes).
 - `N° Ticket` usa el `id`; el campo opcional `numero_ticket` no se carga desde el panel.
 - Con muchos tickets, filtrar en el navegador deja de escalar: conviene mover los filtros a la API (`GET /tickets/?desde=...`) junto con la paginación pendiente.
+
+---
+
+## AGROPESO-026: Edición de tickets abiertos y cerrados (backend + panel admin)
+
+El administrador puede corregir cualquier ticket ya creado (patente, chofer, proveedor, producto, tara y bruto), esté abierto o cerrado. El peso neto siempre lo recalcula el backend.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `backend/schemas/ticket_schema.py` | **Nuevo** `TicketUpdate`: `extra="forbid"`, recorta espacios, mismos límites que `TicketCreate` |
+| `backend/services/ticket_service.py` | **Nuevo** `editar_ticket`: valida ticket, proveedor, producto y pesos, y decide el estado |
+| `backend/routers/ticket_router.py` | **Nuevo** `PUT /tickets/{ticket_id}` (solo admin) |
+| `backend/utils/exceptions.py` | **Nueva** `ReferenciaNoEncontradaError` (proveedor/producto inexistente al editar → `404`) |
+| `backend/repository/ticket_repository.py` | Sin cambios: `update_ticket` ya guardaba todos los campos y el neto calculado |
+| `backend/tests/test_server.py`, `backend/tests/test_endpoints.py` | 15 tests nuevos |
+| `frontend/html/admin.html` | **Nuevo** modal `#modal-editar-ticket` |
+| `frontend/js/admin.js` | Botón **Editar** en cada fila, `abrirModalEditar`, vista previa del neto, `validarEdicion` y envío con `PUT` |
+
+### Cómo funciona
+
+| Situación | Resultado |
+|---|---|
+| Ticket abierto, sin `peso_bruto` | Se corrigen los datos; sigue `abierto` con neto `null` |
+| Ticket abierto, con `peso_bruto` válido | Queda `cerrado` y se calcula el neto |
+| Ticket cerrado, con `peso_bruto` válido | Sigue `cerrado` y el neto se recalcula (`bruto - tara`) |
+| `peso_bruto <= peso_tara` | `400`, no se guarda nada |
+| Ticket cerrado con `peso_bruto: null` | `400` (no se reabre un ticket desde la edición) |
+| Ticket, proveedor o producto inexistente | `404` |
+| Rol `cliente` / sin token | `403` / `401` |
+
+**Panel admin**: cada fila de la tabla (abiertos de hoy y resultados de filtros) tiene **Editar**; los abiertos además mantienen **Cerrar**. El modal se abre con los valores actuales del ticket. En un ticket cerrado el bruto es obligatorio (`*`). El **Peso neto** se recalcula en vivo al cambiar tara o bruto (en rojo si el bruto no supera la tara). Los errores, tanto los de la validación en el navegador como los `400`/`404`/`422` de la API, se muestran dentro del modal sin perder lo escrito. Al guardar, el modal se cierra y la lista se vuelve a pedir a la API.
+
+### Decisiones técnicas
+
+- **`PUT` y no `PATCH`**: el modal siempre manda el ticket completo, así no hay ambigüedad entre "no lo mandé" y "lo quiero vacío" (por ejemplo, quitar la patente o el producto).
+- **`404` para proveedor/producto inexistente al editar** (como pide el ticket), mientras que al crear sigue siendo `400`. Por eso existe `ReferenciaNoEncontradaError`, separada de `ReglaNegocioError`.
+- **Se valida todo antes de modificar la entidad**: si algo falla, el ticket queda como estaba.
+- **El neto no se recibe**: lo calcula la entidad `Ticket` (`peso_bruto - peso_tara`) y el repositorio lo guarda.
+- **Sin `innerHTML`**: opciones con `createElement`, errores con `textContent`, botones con `addEventListener`.
+
+### Cómo probarlo
+
+1. Admin: en un ticket abierto, **Editar** → cambiar patente, chofer, proveedor, producto o tara → **Guardar cambios**: la tabla muestra los datos nuevos y sigue abierto.
+2. Admin: en un ticket abierto, cargar un bruto mayor a la tara → queda cerrado con su neto.
+3. Admin: buscar un ticket cerrado → **Editar** → cambiar la tara → la vista previa del neto cambia; al guardar, la tabla muestra el neto recalculado.
+4. Poner un bruto menor o igual a la tara → mensaje en rojo dentro del modal; no se guarda.
+5. `PUT /tickets/{id}` con token de cliente → `403`.
+
+### Pendientes conocidos
+
+- No hay registro de auditoría: no queda guardado quién editó un ticket ni qué valores tenía antes.
+- No se puede editar `fecha`, `transporte` ni `numero_ticket` (no estaban en el alcance del ticket).

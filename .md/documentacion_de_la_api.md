@@ -7,6 +7,7 @@
 | **GET** | `/tickets/` | Lista los tickets, los más recientes primero. Filtro opcional `?estado=abierto` o `?estado=cerrado` | `list[TicketResponse]` (200) |
 | **POST** | `/tickets/` | Registra una nueva pesada. Si se envía sin `peso_bruto` queda abierto. | `TicketResponse` (201) |
 | **PATCH** | `/tickets/{ticket_id}/cerrar`| Registra la segunda pesada y cierra el ticket. | `TicketResponse` (200) |
+| **PUT** | `/tickets/{ticket_id}` | Edita un ticket abierto o cerrado (solo admin). Recalcula el neto. | `TicketResponse` (200) |
 
 ---
 
@@ -28,6 +29,19 @@
 
 *Nota: `TicketResponse` (lo que sale) incluye los mismos campos, más `id`, `estado` y `peso_neto` (calculado).*
 
+### Campos de `TicketUpdate` (JSON de entrada de `PUT /tickets/{id}`)
+
+Reemplaza todos los campos editables: hay que mandar el ticket completo, no solo lo que cambia. Rechaza campos extra (`422`), por ejemplo `estado`, `peso_neto`, `fecha` o `id`.
+
+| Campo | Tipo | Obligatorio | Regla |
+|---|---|---|---|
+| `chofer` | texto | Sí | No vacío (se recortan espacios), máximo 200 caracteres |
+| `patente` | texto | No | Máximo 11 caracteres |
+| `peso_tara` | entero | Sí | Mayor a 0 |
+| `peso_bruto` | entero | No | Mayor a 0. `null` = el ticket queda abierto (no se permite en un ticket cerrado) |
+| `supplier_id` | entero | Sí | Debe existir (si no, `404`) |
+| `product_id` | entero | No | Si viene, debe existir (si no, `404`) |
+
 ---
 
 ## Estados del Ticket
@@ -40,6 +54,7 @@
 **Reglas de negocio:**
 * La primera pesada es la tara. El estado lo decide el servicio; el cliente no puede enviarlo.
 * Un ticket solo se puede cerrar si existe, está abierto y el peso bruto es mayor a la tara.
+* Al **editar** (`PUT`): sin `peso_bruto` el ticket queda abierto; con `peso_bruto` tiene que ser mayor a la tara, el ticket queda cerrado y el neto se recalcula. Un ticket cerrado no se puede reabrir mandando `peso_bruto: null` (`400`).
 
 ---
 
@@ -49,7 +64,7 @@
 |---|---|
 | **200 / 201** | La operación se realizó correctamente. |
 | **400** | Violación de regla de negocio (ej: bruto no es mayor a la tara, ticket ya cerrado, `supplier_id` o `product_id` inexistente). |
-| **404** | No existe el ticket solicitado. |
+| **404** | No existe el ticket solicitado. Al editar un ticket, también si no existe el `supplier_id` o `product_id` enviado. |
 | **409** | Ya existe un proveedor, producto o usuario con ese nombre (sin distinguir mayúsculas). |
 | **422** | El JSON no cumple el formato (tipos incorrectos, valores negativos, filtro de estado inválido). |
 | **500** | Error interno (ej: `numero_ticket` repetido, rechazado por MySQL). |
@@ -63,6 +78,7 @@ Todos los endpoints de `/tickets` requieren enviar el token JWT en el encabezado
 |---|---|---|---|
 | `POST /tickets/` | Permitido | 403 Forbidden | 401 Unauthorized |
 | `PATCH /tickets/{id}/cerrar` | Permitido | 403 Forbidden | 401 Unauthorized |
+| `PUT /tickets/{id}` | Permitido | 403 Forbidden | 401 Unauthorized |
 | `GET /tickets/` | Todos los tickets | Solo los de su `supplier_id` | 401 Unauthorized |
 | `GET /tickets/{id}` | Cualquier ticket | Solo si pertenece a su `supplier_id` (si no, 404) | 401 Unauthorized |
 
@@ -92,6 +108,19 @@ Todos los endpoints de `/tickets` requieren enviar el token JWT en el encabezado
 }
 ```
 *Respuesta (200): Devuelve el ticket con `"estado": "cerrado"`, `"peso_bruto": 48260` y `"peso_neto": 33100`.*
+
+**Editar el ticket (`PUT /tickets/1`), corrigiendo la tara:**
+```json
+{
+  "chofer": "Ivan Derio",
+  "patente": "HKN279",
+  "peso_tara": 16000,
+  "peso_bruto": 48260,
+  "supplier_id": 1,
+  "product_id": null
+}
+```
+*Respuesta (200): `"estado": "cerrado"` y `"peso_neto": 32260` (recalculado).*
 
 ---
 

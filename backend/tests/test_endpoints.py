@@ -29,6 +29,7 @@ def test_sin_token_responde_401():
     assert client.get("/products/").status_code == 401
     assert client.post("/products/", json={"name": "Soja"}).status_code == 401
     assert client.post("/users/", json=CLIENTE).status_code == 401
+    assert client.put("/tickets/1", json=TICKET).status_code == 401
 
 
 def test_token_invalido_responde_401():
@@ -44,6 +45,16 @@ def test_cliente_no_puede_crear_ticket():
 def test_cliente_no_puede_cerrar_ticket():
     como(UsuarioActual(username="c", rol=Rol.CLIENTE, supplier_id=1))
     assert client.patch("/tickets/1/cerrar", json={"peso_bruto": 48260}).status_code == 403
+
+
+def test_cliente_no_puede_editar_ticket():
+    como(UsuarioActual(username="c", rol=Rol.CLIENTE, supplier_id=1))
+    assert client.put("/tickets/1", json=TICKET).status_code == 403
+
+
+def test_editar_ticket_no_acepta_campos_extra():
+    como(ADMIN_SIN_BD)
+    assert client.put("/tickets/1", json={**TICKET, "peso_neto": 5}).status_code == 422
 
 
 def test_cliente_no_puede_crear_proveedor():
@@ -173,3 +184,64 @@ def test_cliente_con_proveedor_inexistente_responde_400(session):
     r = client.post("/users/", json={**CLIENTE, "supplier_id": 999999})
     assert r.status_code == 400
     assert "proveedor" in r.json()["detail"]
+
+
+# --- Edición de tickets (base real, se deshace con rollback) ---
+
+def crear_ticket_api(proveedor, **extra):
+    r = client.post("/tickets/", json={**TICKET, "supplier_id": proveedor.id, **extra})
+    assert r.status_code == 201
+    return r.json()
+
+
+def test_editar_ticket_abierto_responde_200(session, proveedor, producto):
+    como(ADMIN)
+    usar_sesion(session)
+    ticket = crear_ticket_api(proveedor)
+    r = client.put(f"/tickets/{ticket['id']}", json={
+        "chofer": "  Juan Perez  ", "patente": "AB123CD", "peso_tara": 15000,
+        "supplier_id": proveedor.id, "product_id": producto.id})
+    assert r.status_code == 200
+    cuerpo = r.json()
+    assert cuerpo["chofer"] == "Juan Perez"
+    assert (cuerpo["patente"], cuerpo["peso_tara"], cuerpo["product_id"]) == ("AB123CD", 15000, producto.id)
+    assert (cuerpo["estado"], cuerpo["peso_neto"]) == ("abierto", None)
+
+
+def test_editar_ticket_cerrado_recalcula_neto_en_la_base(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    ticket = crear_ticket_api(proveedor, peso_bruto=48260)
+    r = client.put(f"/tickets/{ticket['id']}", json={
+        **TICKET, "supplier_id": proveedor.id, "peso_tara": 16000, "peso_bruto": 50000})
+    assert r.status_code == 200
+    assert (r.json()["estado"], r.json()["peso_neto"]) == ("cerrado", 34000)
+    assert client.get(f"/tickets/{ticket['id']}").json()["peso_neto"] == 34000
+
+
+def test_editar_con_bruto_menor_a_la_tara_responde_400(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    ticket = crear_ticket_api(proveedor, peso_bruto=48260)
+    r = client.put(f"/tickets/{ticket['id']}", json={**TICKET, "supplier_id": proveedor.id, "peso_bruto": 15160})
+    assert r.status_code == 400
+    assert "bruto" in r.json()["detail"]
+
+
+def test_editar_ticket_inexistente_responde_404(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    r = client.put("/tickets/999999", json={**TICKET, "supplier_id": proveedor.id})
+    assert r.status_code == 404
+
+
+def test_editar_con_proveedor_o_producto_inexistente_responde_404(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    ticket = crear_ticket_api(proveedor)
+    r = client.put(f"/tickets/{ticket['id']}", json={**TICKET, "supplier_id": 999999})
+    assert r.status_code == 404
+    assert "proveedor" in r.json()["detail"]
+    r = client.put(f"/tickets/{ticket['id']}", json={**TICKET, "supplier_id": proveedor.id, "product_id": 999999})
+    assert r.status_code == 404
+    assert "producto" in r.json()["detail"]
