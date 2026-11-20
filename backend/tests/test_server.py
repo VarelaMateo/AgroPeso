@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -278,3 +278,39 @@ def test_editar_con_proveedor_o_producto_inexistente_lanza_error(service):
     with pytest.raises(ReferenciaNoEncontradaError):
         editar(service, abierto.id, product_id=99)
     assert service.obtener_ticket(abierto.id).supplier_id == 1
+
+
+# --- Fecha del ticket ---
+
+def test_registrar_ticket_con_fecha_vieja(service):
+    ticket = crear_ticket(15160, 48260)
+    ticket.fecha = date(2025, 3, 10)
+    assert service.registrar_pesada(ticket).fecha == date(2025, 3, 10)
+
+
+def test_registrar_ticket_con_fecha_futura_lanza_error_y_no_guarda(service):
+    ticket = crear_ticket(15160, None)
+    ticket.fecha = date.today() + timedelta(days=1)
+    with pytest.raises(ReglaNegocioError):
+        service.registrar_pesada(ticket)
+    assert service.obtener_todos_los_tickets(ADMIN) == []
+
+
+def test_editar_cambia_la_fecha(service):
+    abierto = service.registrar_pesada(crear_ticket(15160, None))
+    assert editar(service, abierto.id, fecha=date(2025, 3, 10)).fecha == date(2025, 3, 10)
+
+
+def test_editar_sin_fecha_conserva_la_que_tenia(service):
+    ticket = crear_ticket(15160, None)
+    ticket.fecha = date(2025, 3, 10)
+    abierto = service.registrar_pesada(ticket)
+    assert editar(service, abierto.id, chofer="Otro").fecha == date(2025, 3, 10)
+
+
+def test_editar_con_fecha_futura_lanza_error_y_no_cambia(service):
+    abierto = service.registrar_pesada(crear_ticket(15160, None))
+    with pytest.raises(ReglaNegocioError):
+        editar(service, abierto.id, chofer="Otro", fecha=date.today() + timedelta(days=1))
+    guardado = service.obtener_ticket(abierto.id)
+    assert (guardado.chofer, guardado.fecha) == ("Ivan Derio", date.today())

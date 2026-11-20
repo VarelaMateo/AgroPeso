@@ -78,6 +78,7 @@ class TicketUpdate(BaseModel):
                 "peso_bruto": 48260,
                 "supplier_id": 1,
                 "product_id": None,
+                "fecha": "2026-11-15",
             }
         },
     )
@@ -88,3 +89,4 @@ class TicketUpdate(BaseModel):
     peso_bruto: Optional[int] = Field(default=None, gt=0)  # None: el ticket sigue (o queda) abierto
     supplier_id: int = Field(gt=0)
     product_id: Optional[int] = Field(default=None, gt=0)
+    fecha: Optional[date] = None  # None: se conserva la fecha que tenía el ticket
