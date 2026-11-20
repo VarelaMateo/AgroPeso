@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgroPeso - Facturación</title>
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="tema-oscuro">
+
+  <header class="barra-superior">
+    <div>
+      <h1 class="marca"><span class="marca-nombre">AgroPeso</span> <span class="marca-seccion">- Facturación</span></h1>
+      <div class="subtitulo">
+        <span class="badge-rol">Rol: Admin</span>
+        <span id="nombre-usuario" style="text-transform: capitalize;"></span>
+      </div>
+    </div>
+    <div class="botones-barra">
+      <a href="admin.html" class="boton boton-contorno">Volver al Panel</a>
+      <button id="btn-logout" type="button" class="boton boton-verde">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <main class="contenido">
+
+    <!-- Búsqueda y facturación por lote -->
+    <section class="tarjeta" aria-label="Búsqueda y facturación">
+      <div class="barra-filtros">
+        <div class="filtro filtro-proveedor">
+          <label for="buscar-proveedor">Proveedor (escribí para filtrar o elegí uno)</label>
+          <input id="buscar-proveedor" class="campo" type="search"
+                 list="lista-proveedores" autocomplete="off" placeholder="Ej: Berg">
+          <datalist id="lista-proveedores"></datalist>
+        </div>
+        <div class="filtro">
+          <label for="fecha-desde">Desde</label>
+          <input id="fecha-desde" type="date" class="campo">
+        </div>
+        <div class="filtro">
+          <label for="fecha-hasta">Hasta</label>
+          <input id="fecha-hasta" type="date" class="campo">
+        </div>
+        <button id="btn-facturar" type="button" class="boton boton-azul" disabled
+                title="Elegí un proveedor y un rango de fechas">Marcar como Facturado</button>
+        <button id="btn-limpiar" type="button" class="boton boton-gris">Limpiar</button>
+      </div>
+    </section>
+
+    <div id="mensaje" class="aviso" role="status" style="display: none;"></div>
+
+    <!-- Vista 1: resumen por proveedor -->
+    <section id="vista-resumen" class="tarjeta">
+      <h2 class="titulo-tarjeta">Estado por proveedor</h2>
+      <p class="ayuda">Hacé clic en un proveedor para ver sus pesadas. Solo se facturan tickets cerrados.</p>
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr><th>Proveedor</th><th>Pesadas</th><th>Facturación</th></tr>
+          </thead>
+          <tbody id="tabla-resumen">
+            <tr><td colspan="3" class="centrado">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Vista 2: detalle de un proveedor -->
+    <section id="vista-detalle" class="tarjeta" style="display: none;">
+      <h2 class="titulo-tarjeta" id="titulo-detalle"></h2>
+      <p id="resumen-detalle" class="ayuda"></p>
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>N° Ticket</th><th>Fecha</th><th>Patente</th><th>Producto</th><th>Peso neto</th><th>Facturación</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-detalle"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Confirmación antes de facturar -->
+  <div id="modal-confirmar" class="w3-modal">
+    <div class="w3-modal-content w3-animate-top modal-oscuro" style="max-width: 460px;">
+      <header>
+        <h3>Marcar como facturado</h3>
+      </header>
+      <div class="cuerpo">
+        <p id="confirmar-texto"></p>
+        <p id="confirmar-error" class="texto-error" role="alert" style="display: none;"></p>
+        <div class="acciones">
+          <button type="button" id="confirmar-cancelar" class="boton boton-gris">Cancelar</button>
+          <button type="button" id="confirmar-aceptar" class="boton boton-azul">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/facturas.js"></script>
+</body>
+</html>

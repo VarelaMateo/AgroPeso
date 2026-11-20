@@ -8,7 +8,8 @@ from models.ticket_model import Ticket, EstadoTicket
 from repository.product_repository import ProductRepository
 from repository.supplier_repository import SupplierRepository
 from repository.ticket_repository import TicketRepository
-from schemas.ticket_schema import TicketCreate, TicketResponse, TicketClose, TicketUpdate
+from schemas.ticket_schema import (FacturarRangoRequest, FacturarRangoResponse, TicketClose, TicketCreate,
+                                   TicketResponse, TicketUpdate)
 from services.ticket_service import TicketService
 from utils.exceptions import ReferenciaNoEncontradaError, ReglaNegocioError, TicketNoEncontradoError
 
@@ -36,6 +37,16 @@ def create_ticket(datos: TicketCreate, db: Session = Depends(get_db), user: Usua
 def listar_ticket(estado: Optional[EstadoTicket] = None, db: Session = Depends(get_db), user: UsuarioActual = Depends(get_current_user)):
     service = crear_servicio(db)
     return service.obtener_todos_los_tickets(user, estado)
+
+@router.patch("/facturar", response_model=FacturarRangoResponse)
+def facturar_por_rango(datos: FacturarRangoRequest, db: Session = Depends(get_db), user: UsuarioActual = Depends(get_current_user)):
+    exigir_admin(user)
+    service = crear_servicio(db)
+
+    try:
+        return service.facturar_por_rango(datos.supplier_id, datos.fecha_desde, datos.fecha_hasta)
+    except ReferenciaNoEncontradaError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 @router.get("/{ticket_id}", response_model=TicketResponse)
 def obtener_ticket(ticket_id: int, db: Session = Depends(get_db), user: UsuarioActual = Depends(get_current_user)):

@@ -1,0 +1,185 @@
+/* styles.css: tema oscuro de AgroPeso.
+   Todo cuelga de <body class="tema-oscuro">, así solo afecta a las pantallas que lo usan
+   (por ahora, facturas.html). */
+
+.tema-oscuro {
+  --fondo: #121413;
+  --fondo-barra: #161817;
+  --tarjeta: #1d201f;
+  --borde: #2d3230;
+  --campo: #161817;
+  --texto: #e8ebe9;
+  --texto-suave: #9aa39e;
+  --verde: #8bc34a;
+  --verde-oscuro: #6fa33a;
+  --azul: #2196f3;
+  --rojo: #f44336;
+  --neutro: #2b302e;
+
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: "Poppins", sans-serif;
+  min-height: 100vh;
+}
+
+.tema-oscuro h1, .tema-oscuro h2, .tema-oscuro h3, .tema-oscuro h4,
+.tema-oscuro button, .tema-oscuro input, .tema-oscuro select { font-family: inherit; }
+
+/* ---------- Encabezado ---------- */
+
+.tema-oscuro .barra-superior {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 24px;
+  background: var(--fondo-barra);
+  border-bottom: 1px solid var(--borde);
+}
+.tema-oscuro .marca { margin: 0; font-size: 22px; font-weight: 600; }
+.tema-oscuro .marca-nombre { color: var(--verde); }
+.tema-oscuro .marca-seccion { color: var(--texto); font-weight: 500; }
+.tema-oscuro .subtitulo { margin-top: 4px; display: flex; align-items: center; gap: 8px; color: var(--texto-suave); font-size: 13px; }
+.tema-oscuro .badge-rol {
+  background: rgba(139, 195, 74, 0.15);
+  color: var(--verde);
+  border: 1px solid rgba(139, 195, 74, 0.4);
+  border-radius: 999px;
+  padding: 1px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.tema-oscuro .botones-barra { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- Botones ---------- */
+
+.tema-oscuro .boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 20px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.tema-oscuro .boton:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+
+.tema-oscuro .boton-verde { background: var(--verde); color: #10140f; }
+.tema-oscuro .boton-verde:hover { background: var(--verde-oscuro); }
+
+.tema-oscuro .boton-contorno { background: transparent; color: var(--verde); border-color: var(--verde); }
+.tema-oscuro .boton-contorno:hover { background: rgba(139, 195, 74, 0.12); }
+
+.tema-oscuro .boton-azul { background: var(--azul); color: #fff; }
+.tema-oscuro .boton-azul:hover { background: #1976d2; }
+
+.tema-oscuro .boton-gris { background: var(--neutro); color: var(--texto); border-color: var(--borde); }
+.tema-oscuro .boton-gris:hover { background: #353b38; }
+
+.tema-oscuro .boton:disabled,
+.tema-oscuro .boton:disabled:hover {
+  background: #242826;
+  color: #6c746f;
+  border-color: var(--borde);
+  cursor: not-allowed;
+}
+
+/* ---------- Tarjetas ---------- */
+
+.tema-oscuro .contenido { padding: 20px 24px 32px; display: flex; flex-direction: column; gap: 20px; }
+.tema-oscuro .tarjeta {
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+.tema-oscuro .titulo-tarjeta { margin: 0; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.tema-oscuro .ayuda { margin: 4px 0 14px; font-size: 13px; color: var(--texto-suave); }
+
+/* ---------- Filtros ---------- */
+
+.tema-oscuro .barra-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.tema-oscuro .filtro { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+.tema-oscuro .filtro-proveedor { flex: 1 1 260px; max-width: 420px; }
+.tema-oscuro .filtro label { font-size: 12px; padding-left: 12px; color: var(--texto-suave); }
+
+.tema-oscuro .campo {
+  background: var(--campo);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 14px;
+  color-scheme: dark; /* ícono del calendario y lista del datalist en oscuro */
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.tema-oscuro .campo::placeholder { color: #6c746f; }
+.tema-oscuro .campo:focus { border-color: var(--verde); box-shadow: 0 0 0 3px rgba(139, 195, 74, 0.2); }
+
+/* ---------- Tablas ---------- */
+
+.tema-oscuro .tabla-contenedor { overflow-x: auto; }
+.tema-oscuro .tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tema-oscuro .tabla th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--texto-suave);
+  border-bottom: 1px solid var(--borde);
+}
+.tema-oscuro .tabla td { padding: 12px; border-bottom: 1px solid #262a28; vertical-align: middle; }
+.tema-oscuro .tabla tbody tr:last-child td { border-bottom: none; }
+.tema-oscuro .tabla .centrado { text-align: center; color: var(--texto-suave); }
+.tema-oscuro .fila-proveedor { cursor: pointer; transition: background 0.12s; }
+.tema-oscuro .fila-proveedor:hover { background: #252927; }
+
+/* ---------- Carteles de estado ---------- */
+
+.tema-oscuro .cartel {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.tema-oscuro .cartel + .cartel { margin-left: 6px; }
+.tema-oscuro .cartel-azul { background: var(--azul); color: #fff; }
+.tema-oscuro .cartel-rojo { background: var(--rojo); color: #fff; }
+.tema-oscuro .cartel-neutro { background: var(--neutro); color: #b9c1bc; }
+
+/* ---------- Avisos ---------- */
+
+.tema-oscuro .aviso { padding: 10px 14px; border-radius: 10px; border-left: 4px solid; font-size: 14px; }
+.tema-oscuro .aviso-ok { background: rgba(139, 195, 74, 0.12); border-color: var(--verde); color: #c5e1a5; }
+.tema-oscuro .aviso-error { background: rgba(244, 67, 54, 0.12); border-color: var(--rojo); color: #ef9a9a; }
+
+/* ---------- Modal ---------- */
+
+.tema-oscuro .w3-modal { background-color: rgba(0, 0, 0, 0.7); }
+.tema-oscuro .modal-oscuro {
+  background: var(--tarjeta);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.tema-oscuro .modal-oscuro header { padding: 14px 20px; border-bottom: 1px solid var(--borde); }
+.tema-oscuro .modal-oscuro header h3 { margin: 0; font-size: 18px; color: var(--verde); }
+.tema-oscuro .modal-oscuro .cuerpo { padding: 16px 20px 20px; }
+.tema-oscuro .modal-oscuro .acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.tema-oscuro .texto-error { color: #ef9a9a; font-size: 13px; }
+
+@media (max-width: 600px) {
+  .tema-oscuro .barra-superior, .tema-oscuro .contenido { padding-left: 16px; padding-right: 16px; }
+  .tema-oscuro .botones-barra { margin-left: 0; }
+}
