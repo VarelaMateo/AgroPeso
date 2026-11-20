@@ -583,6 +583,46 @@ En el panel:
 
 ### Pendientes conocidos
 
-- La tabla de tickets del panel todavía no muestra el producto.
+- ~~La tabla de tickets del panel todavía no muestra el producto.~~ Resuelto en *fix-ticket023*.
 - `numero_ticket` repetido sigue respondiendo 500.
 - No se pueden editar ni borrar productos.
+
+---
+
+## fix-ticket023: columna Producto en las tablas de tickets
+
+Las tablas de tickets ahora muestran el producto de cada pesada, tanto en el panel del administrador como en el del cliente.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `frontend/html/admin.html` | Columna **Producto** después de *Proveedor* (`colspan` 10 → 11) |
+| `frontend/js/admin.js` | Mapa `productosPorId` (se llena en `cargarProductos`) y función `nombreProducto` |
+| `frontend/html/cliente.html` | Columna **Producto** en *Todos los tickets* y en *Tickets del mes* (`colspan` 8 → 9 y 5 → 6) |
+| `frontend/js/cliente.js` | `cargarProductos` antes de dibujar, `nombreProducto` y constantes `COLUMNAS_TODOS` / `COLUMNAS_MES` |
+
+### Cómo funciona
+
+1. Al iniciar, la pantalla pide `GET /products/` y arma `productosPorId` (`{id: nombre}`), igual que `proveedoresPorId` en el admin.
+2. Los tickets se dibujan después, así que el nombre ya está disponible en el primer dibujado.
+3. Cada fila muestra:
+
+| Caso | Se muestra |
+|---|---|
+| Ticket sin producto (`product_id: null`) | `—` |
+| Producto conocido | Su nombre |
+| Producto que no vino en la lista (o falló la carga) | Su id, como respaldo |
+
+### Decisiones técnicas
+
+- **Sin cambios en el backend**: la API de tickets sigue devolviendo solo `product_id`; el nombre se resuelve en el navegador con la lista de productos, el mismo criterio que ya se usaba para proveedores.
+- **Constantes para los `colspan` en `cliente.js`**: el número de columnas aparecía repetido en varias llamadas; ahora se cambia en un solo lugar.
+- **Si falla `GET /products/`** la pantalla sigue funcionando y muestra los ids.
+
+### Cómo probarlo
+
+1. Forzar la recarga (`Ctrl + Shift + R`) de `admin.html` y `cliente.html`.
+2. Registrar una pesada con producto y otra sin producto desde el panel del admin.
+3. Buscar ambos tickets en el admin: uno muestra el nombre del producto y el otro `—`.
+4. Entrar como cliente de ese proveedor: las dos tablas muestran la columna *Producto*.

@@ -28,6 +28,7 @@ const listaTopProveedores = document.getElementById("lista-top-proveedores");
 
 let todosLosTickets = [];
 let proveedoresPorId = {};
+let productosPorId = {};
 
 
 // Utilidades 
@@ -64,6 +65,12 @@ function formatoPeso(valor) {
     return valor === null ? "—" : valor.toLocaleString("es-AR");
 }
 
+// El producto es opcional: sin producto se muestra "—"; si no está en el mapa, su id
+function nombreProducto(productId) {
+    if (productId === null) return "—";
+    return productosPorId[productId] ?? productId;
+}
+
 function crearCelda(texto) {
     const td = document.createElement("td");
     td.textContent = texto;
@@ -98,7 +105,7 @@ function crearCeldaAcciones(ticket) {
 function mostrarFilaUnica(texto) {
     const fila = document.createElement("tr");
     const celda = document.createElement("td");
-    celda.colSpan = 10;
+    celda.colSpan = 11;
     celda.className = "w3-center";
     celda.textContent = texto;
     fila.appendChild(celda);
@@ -217,6 +224,7 @@ function renderizarTabla() {
             crearCelda(t.chofer),
             crearCelda(t.patente ?? "—"),
             crearCelda(proveedoresPorId[t.supplier_id] ?? t.supplier_id),
+            crearCelda(nombreProducto(t.product_id)),
             crearCelda(formatoPeso(t.peso_tara)),
             crearCelda(formatoPeso(t.peso_bruto)),
             crearCelda(formatoPeso(t.peso_neto)),
@@ -355,6 +363,8 @@ async function cargarProductos() {
         const respuesta = await fetchConToken(API_PRODUCTOS);
         if (!respuesta.ok) throw new Error(`Error ${respuesta.status}`);
         const productos = await respuesta.json();
+
+        productosPorId = Object.fromEntries(productos.map((p) => [p.id, p.name]));
 
         // El producto es opcional: la primera opción se puede elegir y envía null
         const sinProducto = crearOpcion("", productos.length === 0 ? "No hay productos cargados" : "Sin producto");
