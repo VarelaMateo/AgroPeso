@@ -23,6 +23,12 @@ const statTotal = document.getElementById("stat-total");
 const statVariacion = document.getElementById("stat-variacion");
 const statAbiertas = document.getElementById("stat-abiertas");
 const statNetoPromedio = document.getElementById("stat-neto-promedio");
+const statNetoFiltrado = document.getElementById("stat-neto-filtrado");
+const statCerradasFiltradas = document.getElementById("stat-cerradas-filtradas");
+const filtroProducto = document.getElementById("filtro-producto");
+const filtroDesde = document.getElementById("filtro-desde");
+const filtroHasta = document.getElementById("filtro-hasta");
+const avisoExportar = document.getElementById("aviso-exportar");
 
 function mesAnteriorISO() {
     const hoy = new Date();
@@ -32,6 +38,8 @@ function mesAnteriorISO() {
 
 let tickets = [];
 let productosPorId = {};
+let ticketsFiltrados = []; // lo que muestra "Todos los tickets": es exactamente lo que se descarga
+let nombreDelProveedor = "";
 
 const COLUMNAS_TODOS = 9;
 const COLUMNAS_MES = 6;
@@ -122,6 +130,7 @@ async function cargarNombreProveedor() {
         const mio = proveedores.find((p) => Number(p.id) === Number(sesion.supplier_id));
         if (!mio) throw new Error(`El proveedor ${sesion.supplier_id} no vino en la lista: ${JSON.stringify(proveedores)}`);
         nombreProveedor.textContent = mio.name;
+        nombreDelProveedor = mio.name;
     } catch (error) {
         console.error("Error al cargar el proveedor:", error);
         nombreProveedor.textContent = `Proveedor #${sesion.supplier_id}`;
@@ -135,6 +144,7 @@ async function cargarProductos() {
         if (!respuesta.ok) throw new Error(`GET /products/ respondió ${respuesta.status}`);
         const productos = await respuesta.json();
         productosPorId = Object.fromEntries(productos.map((p) => [p.id, p.name]));
+        actualizarSelectFiltro(filtroProducto, "Todos los productos", productosPorId);
     } catch (error) {
         console.error("Error al cargar los productos:", error);
     }
@@ -171,23 +181,58 @@ function filaTicketMes(t) {
     return fila;
 }
 
-function coincideConBusqueda(t, texto) {
-    if (texto === "") return true;
-    const patente = (t.patente ?? "").toLowerCase();
-    return patente.includes(texto) || t.fecha.includes(texto) || formatoFecha(t.fecha).includes(texto);
+function leerFiltros() {
+    return {
+        texto: buscador.value.trim().toLowerCase(),
+        productId: filtroProducto.value,
+        desde: filtroDesde.value,
+        hasta: filtroHasta.value,
+    };
+}
+
+// Total neto de los tickets cerrados que pasan el filtro actual
+function actualizarNetoFiltrado() {
+    const cerrados = ticketsFiltrados.filter((t) => t.estado === "cerrado");
+    const total = cerrados.reduce((suma, t) => suma + t.peso_neto, 0);
+    statNetoFiltrado.textContent = `${total.toLocaleString("es-AR")} kg`;
+    statCerradasFiltradas.textContent = `${cerrados.length} ${cerrados.length === 1 ? "pesada cerrada" : "pesadas cerradas"}`;
 }
 
 function dibujarTablaTodos() {
-    const texto = buscador.value.trim().toLowerCase();
-    const filtrados = tickets.filter((t) => coincideConBusqueda(t, texto));
+    const f = leerFiltros();
+    const invalido = rangoInvalido(f.desde, f.hasta);
+    // El buscador también acepta la fecha escrita (2026-11-20 o 20/11/2026), como antes
+    ticketsFiltrados = invalido ? [] : tickets.filter((t) =>
+        coincideConFiltros(t, f, [t.fecha, formatoFecha(t.fecha)]));
+    actualizarNetoFiltrado();
 
     if (tickets.length === 0) {
         mostrarFilaUnica(tablaTodos, "Todavía no hay pesadas registradas", COLUMNAS_TODOS);
-    } else if (filtrados.length === 0) {
-        mostrarFilaUnica(tablaTodos, "Ningún ticket coincide con la búsqueda", COLUMNAS_TODOS);
+    } else if (invalido) {
+        mostrarFilaUnica(tablaTodos, "La fecha Desde es posterior a Hasta", COLUMNAS_TODOS);
+    } else if (ticketsFiltrados.length === 0) {
+        mostrarFilaUnica(tablaTodos, "Ningún ticket coincide con los filtros", COLUMNAS_TODOS);
     } else {
-        tablaTodos.replaceChildren(...filtrados.map(filaTicketCompleta));
+        tablaTodos.replaceChildren(...ticketsFiltrados.map(filaTicketCompleta));
     }
+}
+
+// Descarga exactamente las filas de "Todos los tickets" (el backend ya limita a su proveedor)
+function descargarExcel() {
+    if (ticketsFiltrados.length === 0) {
+        mostrarAvisoInline(avisoExportar, "No hay tickets para exportar con los filtros seleccionados");
+        return;
+    }
+    const f = leerFiltros();
+    const partes = ["MisPesadas"];
+    if (f.productId !== "") partes.push(productosPorId[f.productId]);
+
+    const contenido = generarCSV(
+        ticketsFiltrados,
+        () => nombreDelProveedor || `Proveedor ${sesion.supplier_id}`,
+        (t) => nombreProducto(t.product_id),
+    );
+    descargarCSV(nombreDeArchivo(partes, f.desde, f.hasta, fechaLocalISO()), contenido);
 }
 
 function dibujarTablaMes() {
@@ -222,6 +267,17 @@ async function cargarTickets() {
 document.getElementById("btn-salir").addEventListener("click", cerrarSesion);
 document.getElementById("btn-buscar").addEventListener("click", () => buscador.focus());
 buscador.addEventListener("input", dibujarTablaTodos);
+for (const filtro of [filtroProducto, filtroDesde, filtroHasta]) {
+    filtro.addEventListener("change", dibujarTablaTodos);
+}
+document.getElementById("btn-limpiar-filtros").addEventListener("click", () => {
+    buscador.value = "";
+    filtroProducto.value = "";
+    filtroDesde.value = "";
+    filtroHasta.value = "";
+    dibujarTablaTodos();
+});
+document.getElementById("btn-descargar").addEventListener("click", descargarExcel);
 
 if (accesoPermitido) {
     actualizarReloj();
