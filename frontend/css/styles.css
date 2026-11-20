@@ -20,6 +20,7 @@
   color: var(--texto);
   font-family: "Poppins", sans-serif;
   min-height: 100vh;
+  color-scheme: dark; /* barras de desplazamiento y controles nativos en oscuro */
 }
 
 .tema-oscuro h1, .tema-oscuro h2, .tema-oscuro h3, .tema-oscuro h4,
@@ -77,6 +78,9 @@
 
 .tema-oscuro .boton-azul { background: var(--azul); color: #fff; }
 .tema-oscuro .boton-azul:hover { background: #1976d2; }
+
+.tema-oscuro .boton-rojo-contorno { background: transparent; color: #ef9a9a; border-color: var(--rojo); }
+.tema-oscuro .boton-rojo-contorno:hover { background: rgba(244, 67, 54, 0.12); }
 
 .tema-oscuro .boton-gris { background: var(--neutro); color: var(--texto); border-color: var(--borde); }
 .tema-oscuro .boton-gris:hover { background: #353b38; }

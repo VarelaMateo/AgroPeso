@@ -943,6 +943,8 @@ La columna *Pesadas* indica cuántas tiene y cuántas siguen abiertas. Escribir 
 
 **Facturar**: con un proveedor elegido y las dos fechas cargadas (*Desde* ≤ *Hasta*), se habilita **Marcar como Facturado**. Pide confirmación (con la cantidad de pesadas pendientes), llama a `PATCH /tickets/facturar` y vuelve a pedir todo a la API: los carteles pasan de rojo a azul y el resumen se actualiza.
 
+**Deshacer**: si se facturó algo por error, con el mismo proveedor y rango, **Desmarcar facturación** (también con confirmación) manda `"facturado": false` al mismo endpoint y esas pesadas vuelven a rojo. Para deshacer una sola pesada, elegir *Desde* y *Hasta* en su día.
+
 ### Decisiones técnicas
 
 - **Solo se facturan tickets cerrados** (la "regla recomendada" del ticket): un camión que todavía está adentro no tiene peso neto. Esa pesada sigue en rojo hasta que se cierre y se facture en otro lote.
@@ -961,6 +963,5 @@ La columna *Pesadas* indica cuántas tiene y cuántas siguen abiertas. Escribir 
 
 ### Pendientes conocidos
 
-- No se puede desmarcar una pesada facturada por error (habría que hacerlo en la base).
 - No se guarda cuándo ni quién facturó, ni un número de factura.
 - El panel del cliente todavía no muestra el estado de facturación de sus pesadas.

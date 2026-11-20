@@ -29,12 +29,12 @@ class RepositorioEnMemoria:
         self.tickets[ticket.id] = ticket
         return ticket
 
-    def facturar_rango(self, supplier_id, desde, hasta):
+    def facturar_rango(self, supplier_id, desde, hasta, facturado=True):
         actualizados = 0
         for t in self.tickets.values():
             if (t.supplier_id == supplier_id and desde <= t.fecha <= hasta
-                    and t.estado == EstadoTicket.CERRADO and not t.facturado):
-                t.facturado = True
+                    and t.estado == EstadoTicket.CERRADO and t.facturado != facturado):
+                t.facturado = facturado
                 actualizados += 1
         return actualizados
 
@@ -348,7 +348,7 @@ def test_facturar_por_rango_solo_toca_cerrados_del_proveedor_en_el_rango(service
 
     resumen = service.facturar_por_rango(1, date(2025, 3, 1), date(2025, 3, 31))
 
-    assert resumen == {"actualizados": 2, "supplier_id": 1,
+    assert resumen == {"actualizados": 2, "supplier_id": 1, "facturado": True,
                        "fecha_desde": date(2025, 3, 1), "fecha_hasta": date(2025, 3, 31)}
     facturado = {t.id: service.obtener_ticket(t.id).facturado
                  for t in [dentro_1, dentro_2, abierto, antes, despues, otro_proveedor]}
@@ -371,3 +371,15 @@ def test_editar_ticket_no_cambia_la_facturacion(service):
     ticket = crear_ticket_del_dia(service, date(2025, 3, 10))
     service.facturar_por_rango(1, date(2025, 3, 1), date(2025, 3, 31))
     assert editar(service, ticket.id, peso_bruto=50000).facturado is True
+
+
+def test_desmarcar_facturacion_solo_en_el_rango(service):
+    marzo = crear_ticket_del_dia(service, date(2025, 3, 10))
+    abril = crear_ticket_del_dia(service, date(2025, 4, 10))
+    service.facturar_por_rango(1, date(2025, 3, 1), date(2025, 4, 30))
+
+    resumen = service.facturar_por_rango(1, date(2025, 3, 1), date(2025, 3, 31), facturado=False)
+
+    assert (resumen["actualizados"], resumen["facturado"]) == (1, False)
+    assert service.obtener_ticket(marzo.id).facturado is False
+    assert service.obtener_ticket(abril.id).facturado is True

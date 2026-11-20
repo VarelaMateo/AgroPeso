@@ -8,7 +8,7 @@
 | **POST** | `/tickets/` | Registra una nueva pesada. Si se envía sin `peso_bruto` queda abierto. | `TicketResponse` (201) |
 | **PATCH** | `/tickets/{ticket_id}/cerrar`| Registra la segunda pesada y cierra el ticket. | `TicketResponse` (200) |
 | **PUT** | `/tickets/{ticket_id}` | Edita un ticket abierto o cerrado (solo admin). Recalcula el neto. | `TicketResponse` (200) |
-| **PATCH** | `/tickets/facturar` | Marca como facturadas las pesadas cerradas de un proveedor en un rango de fechas (solo admin). | `FacturarRangoResponse` (200) |
+| **PATCH** | `/tickets/facturar` | Marca (o desmarca, con `"facturado": false`) como facturadas las pesadas cerradas de un proveedor en un rango de fechas (solo admin). | `FacturarRangoResponse` (200) |
 
 ---
 
@@ -144,6 +144,7 @@ Marca como facturadas (`facturado = true`) las pesadas del proveedor que cumplan
 | `supplier_id` | entero | Sí | Mayor a 0. Debe existir (si no, `404`) |
 | `fecha_desde` | fecha | Sí | `YYYY-MM-DD` |
 | `fecha_hasta` | fecha | Sí | `YYYY-MM-DD`. No puede ser anterior a `fecha_desde` (si no, `422`) |
+| `facturado` | booleano | No | Por defecto `true`. Con `false` deshace la facturación del rango (por si se marcó por error) |
 
 ```json
 { "supplier_id": 1, "fecha_desde": "2026-11-01", "fecha_hasta": "2026-11-20" }
@@ -152,7 +153,7 @@ Marca como facturadas (`facturado = true`) las pesadas del proveedor que cumplan
 **Respuesta (200, `FacturarRangoResponse`):**
 
 ```json
-{ "actualizados": 2, "supplier_id": 1, "fecha_desde": "2026-11-01", "fecha_hasta": "2026-11-20" }
+{ "actualizados": 2, "supplier_id": 1, "fecha_desde": "2026-11-01", "fecha_hasta": "2026-11-20", "facturado": true }
 ```
 
 | Código | Cuándo |
@@ -162,7 +163,7 @@ Marca como facturadas (`facturado = true`) las pesadas del proveedor que cumplan
 | 404 | No existe el proveedor |
 | 422 | Fechas invertidas, campos faltantes o extra |
 
-No hay forma de desmarcar una pesada facturada desde la API.
+Para deshacer una facturación hecha por error, se manda el mismo rango con `"facturado": false`: las pesadas facturadas de ese rango vuelven a quedar sin facturar.
 
 ---
 

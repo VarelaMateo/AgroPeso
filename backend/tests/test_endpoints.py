@@ -79,7 +79,7 @@ def test_facturar_con_fechas_invertidas_responde_422():
 
 def test_facturar_no_acepta_campos_extra():
     como(ADMIN_SIN_BD)
-    assert client.patch("/tickets/facturar", json={**FACTURAR, "facturado": True}).status_code == 422
+    assert client.patch("/tickets/facturar", json={**FACTURAR, "estado": "cerrado"}).status_code == 422
 
 
 def test_cliente_no_puede_crear_proveedor():
@@ -324,7 +324,7 @@ def test_facturar_por_rango_actualiza_solo_los_cerrados_del_rango(session, prove
     r = client.patch("/tickets/facturar", json={**FACTURAR, "supplier_id": proveedor.id})
 
     assert r.status_code == 200
-    assert r.json() == {"actualizados": 1, "supplier_id": proveedor.id,
+    assert r.json() == {"actualizados": 1, "supplier_id": proveedor.id, "facturado": True,
                         "fecha_desde": "2025-03-01", "fecha_hasta": "2025-03-31"}
     assert client.get(f"/tickets/{dentro['id']}").json()["facturado"] is True
     assert client.get(f"/tickets/{abierto['id']}").json()["facturado"] is False
@@ -337,3 +337,17 @@ def test_facturar_proveedor_inexistente_responde_404(session):
     r = client.patch("/tickets/facturar", json={**FACTURAR, "supplier_id": 999999})
     assert r.status_code == 404
     assert "proveedor" in r.json()["detail"]
+
+
+def test_desmarcar_facturacion_por_rango(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    ticket = crear_ticket_api(proveedor, peso_bruto=48260, fecha="2025-03-10")
+    datos = {**FACTURAR, "supplier_id": proveedor.id}
+    client.patch("/tickets/facturar", json=datos)
+
+    r = client.patch("/tickets/facturar", json={**datos, "facturado": False})
+
+    assert r.status_code == 200
+    assert (r.json()["actualizados"], r.json()["facturado"]) == (1, False)
+    assert client.get(f"/tickets/{ticket['id']}").json()["facturado"] is False

@@ -44,7 +44,7 @@ def facturar_por_rango(datos: FacturarRangoRequest, db: Session = Depends(get_db
     service = crear_servicio(db)
 
     try:
-        return service.facturar_por_rango(datos.supplier_id, datos.fecha_desde, datos.fecha_hasta)
+        return service.facturar_por_rango(datos.supplier_id, datos.fecha_desde, datos.fecha_hasta, datos.facturado)
     except ReferenciaNoEncontradaError as e:
         raise HTTPException(status_code=404, detail=str(e))
 

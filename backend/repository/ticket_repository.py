@@ -51,17 +51,17 @@ class TicketRepository:
         self.session.refresh(ticket_db)
         return self._to_entity(ticket_db)
 
-    def facturar_rango(self, supplier_id: int, desde: date, hasta: date) -> int:
-        """Marca como facturados los tickets cerrados y sin facturar del proveedor entre esas fechas
-        (ambas incluidas). Devuelve cuántos se actualizaron."""
+    def facturar_rango(self, supplier_id: int, desde: date, hasta: date, facturado: bool = True) -> int:
+        """Marca (o desmarca, con facturado=False) los tickets cerrados del proveedor entre esas fechas
+        (ambas incluidas) que todavía no tienen ese valor. Devuelve cuántos se actualizaron."""
         resultado = self.session.execute(
             update(TicketDB)
             .where(TicketDB.supplier_id == supplier_id,
                    TicketDB.fecha >= desde,
                    TicketDB.fecha <= hasta,
                    TicketDB.estado == EstadoTicket.CERRADO.value,
-                   TicketDB.facturado.is_(False))
-            .values(facturado=True)
+                   TicketDB.facturado.is_(not facturado))
+            .values(facturado=facturado)
         )
         self.session.commit()
         return resultado.rowcount

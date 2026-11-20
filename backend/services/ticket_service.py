@@ -80,13 +80,14 @@ class TicketService:
             raise TicketNoEncontradoError(f"No existe el ticket con id {ticket_id}")
         return actualizado
 
-    def facturar_por_rango(self, supplier_id: int, fecha_desde: date, fecha_hasta: date) -> dict:
+    def facturar_por_rango(self, supplier_id: int, fecha_desde: date, fecha_hasta: date,
+                           facturado: bool = True) -> dict:
         if self.supplier_repository.get_supplier_by_id(supplier_id) is None:
             raise ReferenciaNoEncontradaError(f"No existe el proveedor con id {supplier_id}")
         # Solo se facturan tickets cerrados: uno abierto todavía no tiene peso neto
-        actualizados = self.repository.facturar_rango(supplier_id, fecha_desde, fecha_hasta)
+        actualizados = self.repository.facturar_rango(supplier_id, fecha_desde, fecha_hasta, facturado)
         return {"actualizados": actualizados, "supplier_id": supplier_id,
-                "fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta}
+                "fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta, "facturado": facturado}
 
     def obtener_ticket (self, ticket_id: int) -> Ticket:
         ticket_encontrado = self.repository.get_ticket_by_id(ticket_id) 

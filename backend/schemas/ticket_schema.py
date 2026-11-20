@@ -103,6 +103,7 @@ class FacturarRangoRequest(BaseModel):
     supplier_id: int = Field(gt=0)
     fecha_desde: date
     fecha_hasta: date
+    facturado: bool = True  # False: deshace la facturación del rango
 
     @model_validator(mode="after")
     def rango_valido(self):
@@ -117,3 +118,4 @@ class FacturarRangoResponse(BaseModel):
     supplier_id: int
     fecha_desde: date
     fecha_hasta: date
+    facturado: bool
