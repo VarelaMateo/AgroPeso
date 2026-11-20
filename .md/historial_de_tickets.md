@@ -965,3 +965,18 @@ La columna *Pesadas* indica cuántas tiene y cuántas siguen abiertas. Escribir 
 
 - No se guarda cuándo ni quién facturó, ni un número de factura.
 - El panel del cliente todavía no muestra el estado de facturación de sus pesadas.
+
+---
+
+## dev-fixTemaBlack: tema claro / oscuro en el panel admin
+
+Botón flotante abajo a la derecha en `admin.html` (**🌙 Modo oscuro** / **☀️ Modo claro**) que alterna el tema. La elección se recuerda en ese navegador (`localStorage`, clave `agropeso_tema`); por defecto, claro.
+
+| Archivo | Cambio |
+|---|---|
+| `frontend/js/tema.js` | **Nuevo**: aplica el tema guardado al principio del `<body>` (sin parpadeo blanco) y maneja el botón |
+| `frontend/css/styles.css` | Colores oscuros para las clases de W3.CSS que usa el admin (fondos, campos, tablas, modales, avisos) y estilo del botón flotante. Todo bajo `body.tema-oscuro`: el modo claro queda igual que antes |
+| `frontend/html/admin.html` | Enlaza `styles.css` y `tema.js`, y agrega el botón `#btn-tema` |
+
+- El botón queda debajo de los modales (`z-index` 2) y la página tiene espacio abajo para que no tape la última fila de la tabla.
+- `facturas.html` sigue siempre en oscuro; `cliente.html` no cambia.
