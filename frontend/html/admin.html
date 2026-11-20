@@ -14,7 +14,13 @@
 
     /* Barra superior */
     .barra-superior { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 16px 24px; }
-    .barra-superior .btn-salir { margin-left: auto; }
+    .barra-superior .botones-barra { margin-left: auto; display: flex; gap: 8px; }
+
+    /* Barra de filtros combinables */
+    .barra-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 0 24px 8px; }
+    .barra-filtros .filtro { display: flex; flex-direction: column; min-width: 150px; }
+    .barra-filtros label { font-size: 12px; padding-left: 12px; }
+    .barra-filtros select, .barra-filtros input { padding: 6px 12px; }
     .buscador-caja { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 220px; max-width: 480px; padding: 6px 14px; }
     .punto { width: 22px; height: 22px; flex: none; }
 
@@ -71,13 +77,45 @@
     <div class="buscador-caja w3-light-grey w3-round-xxlarge">
       <span class="w3-circle w3-light-green punto"></span>
       <input id="buscador" class="w3-input w3-border-0 w3-transparent" type="search"
-             placeholder="Buscar por proveedor o patente (abiertos y cerrados)" aria-label="Buscar tickets">
+             placeholder="Buscar por patente, chofer o proveedor" aria-label="Buscar tickets">
     </div>
 
-    <button id="btn-logout" type="button" class="btn-salir w3-button w3-light-green w3-round-xxlarge">
-      Cerrar sesión
-    </button>
+    <div class="botones-barra">
+      <button id="btn-exportar" type="button" class="w3-button w3-green w3-round-xxlarge"
+              title="Descarga en CSV (Excel) los tickets que se ven en la tabla">
+        Exportar Excel
+      </button>
+      <button id="btn-logout" type="button" class="w3-button w3-light-green w3-round-xxlarge">
+        Cerrar sesión
+      </button>
+    </div>
   </header>
+
+  <!-- Filtros combinables (AND): afectan la tabla y el archivo exportado -->
+  <section class="barra-filtros" aria-label="Filtros">
+    <div class="filtro">
+      <label for="filtro-proveedor" class="w3-text-grey">Proveedor</label>
+      <select id="filtro-proveedor" class="w3-select w3-border w3-round-xxlarge w3-white">
+        <option value="">Todos los proveedores</option>
+      </select>
+    </div>
+    <div class="filtro">
+      <label for="filtro-producto" class="w3-text-grey">Producto</label>
+      <select id="filtro-producto" class="w3-select w3-border w3-round-xxlarge w3-white">
+        <option value="">Todos los productos</option>
+      </select>
+    </div>
+    <div class="filtro">
+      <label for="filtro-desde" class="w3-text-grey">Desde</label>
+      <input id="filtro-desde" type="date" class="w3-input w3-border w3-round-xxlarge">
+    </div>
+    <div class="filtro">
+      <label for="filtro-hasta" class="w3-text-grey">Hasta</label>
+      <input id="filtro-hasta" type="date" class="w3-input w3-border w3-round-xxlarge">
+    </div>
+    <button id="btn-limpiar-filtros" type="button" class="w3-button w3-light-grey w3-round-xxlarge">Limpiar filtros</button>
+    <span id="aviso-exportar" class="w3-text-red w3-small" role="status" style="display: none;"></span>
+  </section>
 
   <main class="panel-principal">
 
@@ -246,6 +284,7 @@
   </div>
 
   <script src="../js/auth.js"></script>
+  <script src="../js/exportar.js"></script>
   <script src="../js/admin.js"></script>
 </body>
 </html>

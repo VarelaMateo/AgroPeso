@@ -95,3 +95,38 @@ pytest
 * `test_server.py`: Valida las reglas de negocio en memoria.
 * `test_endpoints.py`: Verifica con `TestClient` los 401 (sin token o token inválido) y los 403 (cliente intentando escribir), sin base de datos. Los tests de 409/400 de proveedores sí usan la base real (con rollback).
 * `test_repository.py`: Prueba contra la base real. Requiere MariaDB encendido; usa fixtures para deshacer los cambios (no deja basura en la BD).
+
+---
+
+## Filtros y exportación a Excel (frontend)
+
+Desde AGROPESO-025 los paneles de admin y cliente filtran y exportan **en el navegador**, sin endpoints nuevos. La lógica común está en `frontend/js/exportar.js`, que se carga entre `auth.js` y el script de cada pantalla:
+
+```html
+<script src="../js/auth.js"></script>
+<script src="../js/exportar.js"></script>
+<script src="../js/admin.js"></script>  <!-- o cliente.js -->
+```
+
+| Función | Para qué sirve |
+|---|---|
+| `coincideConFiltros(t, filtros, textosExtra)` | Aplica todos los filtros con `AND`; un filtro vacío (`""`) no filtra |
+| `rangoInvalido(desde, hasta)` | `true` si *Desde* es posterior a *Hasta* |
+| `generarCSV(tickets, nombreProveedor, nombreProducto)` | Arma el CSV con encabezado, filas y fila de `TOTALES` |
+| `nombreDeArchivo(partes, desde, hasta, hoy)` | Ej: `AgroPeso_Berg_2026-11-01_a_2026-11-20.csv` |
+| `descargarCSV(nombre, contenido)` | Descarga con `Blob` + enlace temporal |
+| `actualizarSelectFiltro(select, textoTodos, porId)` | Llena un `<select>` de filtro conservando la opción elegida |
+
+### Formato del CSV
+
+* **UTF-8 con BOM** (`\uFEFF`) para que Excel muestre tildes y ñ.
+* **Separador `;`** (el que usa Excel con configuración regional en español) y fin de línea `CRLF`.
+* **Textos entre comillas** con las comillas internas duplicadas (`Chofer "Pepe"` → `"Chofer ""Pepe"""`).
+* **Números sin separador de miles** (`17040`) para que Excel los tome como números; `-` si no hay valor.
+* **Protección contra fórmulas**: si un texto empieza con `=`, `+`, `@` o `-` seguido de algo, se le antepone `'` para que Excel no lo ejecute.
+
+### Cómo probarlo a mano
+
+1. Forzar la recarga (`Ctrl + Shift + R`). Si un cambio en `exportar.js` no se ve, cerrar la pestaña y volver a abrirla: el navegador puede seguir usando la versión en caché.
+2. Exportar y abrir el `.csv` con doble clic en Excel: las columnas deben quedar separadas y la fila `TOTALES` al final.
+3. Si Excel muestra todo en una sola columna, la configuración regional usa `,` como separador de listas: abrirlo con *Datos → Desde texto/CSV* y elegir `;`.

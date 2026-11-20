@@ -26,10 +26,16 @@ const selectProveedores = document.getElementById("supplier_id");
 const selectProductos = document.getElementById("product_id");
 const statTicketsMes = document.getElementById("stat-tickets-mes");
 const listaTopProveedores = document.getElementById("lista-top-proveedores");
+const filtroProveedor = document.getElementById("filtro-proveedor");
+const filtroProducto = document.getElementById("filtro-producto");
+const filtroDesde = document.getElementById("filtro-desde");
+const filtroHasta = document.getElementById("filtro-hasta");
+const avisoExportar = document.getElementById("aviso-exportar");
 
 let todosLosTickets = [];
 let proveedoresPorId = {};
 let productosPorId = {};
+let ticketsVisibles = []; // lo que muestra la tabla: es exactamente lo que se exporta
 
 
 // Utilidades 
@@ -195,27 +201,46 @@ document.addEventListener("keydown", (event) => {
 
 // Tabla (filtra en el navegador)
 
-function renderizarTabla() {
-    const consulta = buscador.value.trim().toLowerCase();
-    let tickets;
+function leerFiltros() {
+    return {
+        texto: buscador.value.trim().toLowerCase(),
+        supplierId: filtroProveedor.value,
+        productId: filtroProducto.value,
+        desde: filtroDesde.value,
+        hasta: filtroHasta.value,
+    };
+}
 
-    if (consulta === "") {
-        tituloTabla.textContent = "Lista de tickets abiertos de hoy";
-        const hoy = fechaDeHoy();
-        tickets = todosLosTickets.filter((t) => t.estado === "abierto" && t.fecha === hoy);
-    } else {
-        // Con busqueda se miran todos los tickets, abiertos y cerrados
-        tituloTabla.textContent = "Resultado de la busqueda";
-        tickets = todosLosTickets.filter((t) => {
-            const proveedor = (proveedoresPorId[t.supplier_id] ?? "").toLowerCase()
-            const patente = (t.patente ?? "").toLowerCase();
-            return proveedor.includes(consulta) || patente.includes(consulta);
-        });
+function hayFiltrosActivos(f) {
+    return Object.values(f).some((valor) => valor !== "");
+}
+
+function renderizarTabla() {
+    const filtros = leerFiltros();
+
+    if (rangoInvalido(filtros.desde, filtros.hasta)) {
+        tituloTabla.textContent = "Resultado de los filtros";
+        ticketsVisibles = [];
+        mostrarFilaUnica("La fecha Desde es posterior a Hasta");
+        return;
     }
 
+    if (!hayFiltrosActivos(filtros)) {
+        tituloTabla.textContent = "Lista de tickets abiertos de hoy";
+        const hoy = fechaDeHoy();
+        ticketsVisibles = todosLosTickets.filter((t) => t.estado === "abierto" && t.fecha === hoy);
+    } else {
+        // Con filtros se miran todos los tickets, abiertos y cerrados
+        ticketsVisibles = todosLosTickets.filter((t) =>
+            coincideConFiltros(t, filtros, [proveedoresPorId[t.supplier_id]]));
+        const n = ticketsVisibles.length;
+        tituloTabla.textContent = `Resultado de los filtros (${n} ${n === 1 ? "ticket" : "tickets"})`;
+    }
+
+    const tickets = ticketsVisibles;
     if (tickets.length === 0) {
-        mostrarFilaUnica(consulta === ""
-            ? "No hay tickets abiertos hoy" : "Ningun ticket coincide con la busqueda");
+        mostrarFilaUnica(hayFiltrosActivos(filtros)
+            ? "Ningun ticket coincide con los filtros" : "No hay tickets abiertos hoy");
         return;
     }
 
@@ -293,6 +318,38 @@ async function cargarTickets() {
 }
 
 buscador.addEventListener("input", renderizarTabla);
+for (const filtro of [filtroProveedor, filtroProducto, filtroDesde, filtroHasta]) {
+    filtro.addEventListener("change", renderizarTabla);
+}
+
+document.getElementById("btn-limpiar-filtros").addEventListener("click", () => {
+    buscador.value = "";
+    filtroProveedor.value = "";
+    filtroProducto.value = "";
+    filtroDesde.value = "";
+    filtroHasta.value = "";
+    renderizarTabla();
+});
+
+// Exportar: descarga exactamente las filas de la tabla
+function exportarExcel() {
+    if (ticketsVisibles.length === 0) {
+        mostrarAvisoInline(avisoExportar, "No hay tickets para exportar con los filtros seleccionados");
+        return;
+    }
+    const f = leerFiltros();
+    const partes = ["AgroPeso", f.supplierId === "" ? "General" : proveedoresPorId[f.supplierId]];
+    if (f.productId !== "") partes.push(productosPorId[f.productId]);
+
+    const contenido = generarCSV(
+        ticketsVisibles,
+        (t) => proveedoresPorId[t.supplier_id] ?? t.supplier_id,
+        (t) => nombreProducto(t.product_id),
+    );
+    descargarCSV(nombreDeArchivo(partes, f.desde, f.hasta, fechaDeHoy()), contenido);
+}
+
+document.getElementById("btn-exportar").addEventListener("click", exportarExcel);
 
 // Proveedores
 
@@ -319,6 +376,7 @@ async function cargarProveedores() {
         const opciones = [crearOpcion("", textoInicial, true)];
         for (const p of proveedores) opciones.push(crearOpcion(p.id, p.name));
         selectProveedores.replaceChildren(...opciones);
+        actualizarSelectFiltro(filtroProveedor, "Todos los proveedores", proveedoresPorId);
     } catch (error) {
         console.error("Error al cargar los proveedores: ", error);
         selectProveedores.replaceChildren(crearOpcion("", "No se pudieron cargar los proveedores", true));
@@ -368,6 +426,7 @@ async function cargarProductos() {
         const productos = await respuesta.json();
 
         productosPorId = Object.fromEntries(productos.map((p) => [p.id, p.name]));
+        actualizarSelectFiltro(filtroProducto, "Todos los productos", productosPorId);
 
         // El producto es opcional: la primera opción se puede elegir y envía null
         const sinProducto = crearOpcion("", productos.length === 0 ? "No hay productos cargados" : "Sin producto");

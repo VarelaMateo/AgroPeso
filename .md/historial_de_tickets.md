@@ -680,3 +680,76 @@ El administrador ya puede dar de alta usuarios con rol `cliente` desde el panel,
 
 - No hay listado, edición, baja ni cambio de contraseña de clientes.
 - El primer admin se sigue creando con `crear_admin.py`.
+
+---
+
+## AGROPESO-025: Filtros avanzados y exportación a Excel/CSV (admin y cliente)
+
+El administrador y el cliente pueden combinar filtros (proveedor, producto, texto y rango de fechas) y descargar un CSV listo para Excel con exactamente las filas filtradas y una fila de totales.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `frontend/js/exportar.js` | **Nuevo**, compartido: filtros combinables, generación del CSV, nombre del archivo y descarga |
+| `frontend/html/admin.html` | Botón **Exportar Excel** al lado del buscador (mismo tamaño que *Cerrar sesión*) y barra de filtros: proveedor, producto, desde, hasta, limpiar |
+| `frontend/js/admin.js` | `leerFiltros`, `renderizarTabla` con filtros `AND`, `exportarExcel`, selectores de filtro poblados desde `proveedoresPorId` / `productosPorId` |
+| `frontend/html/cliente.html` | Botón **Descargar Excel** al lado del buscador, barra de filtros (producto, desde, hasta, limpiar) y tarjeta **Total neto filtrado** |
+| `frontend/js/cliente.js` | Filtros sobre *Todos los tickets*, total neto filtrado y `descargarExcel` |
+| `.md/guia_de_desarrollo.md`, `.md/arquitectura_del_sistema.md` | Funciones de `exportar.js` y formato del CSV |
+
+### Cómo funciona
+
+**Admin**
+
+| Situación | Tabla | Archivo |
+|---|---|---|
+| Sin filtros | Tickets abiertos de hoy (como antes) | Esos mismos tickets → `AgroPeso_General_2026-11-20.csv` |
+| Con algún filtro | Todos los tickets (abiertos y cerrados) que cumplen **todos** los filtros, con la cantidad en el título | Esas mismas filas → `AgroPeso_Berg_2026-11-01_a_2026-11-20.csv` |
+| *Desde* posterior a *Hasta* | "La fecha Desde es posterior a Hasta" | No descarga |
+| Sin resultados | "Ningun ticket coincide con los filtros" | Aviso inline, no descarga |
+
+El buscador de texto busca en patente, chofer y nombre del proveedor. Si se filtra un producto, su nombre también va en el archivo (`AgroPeso_General_Soja_...csv`).
+
+**Cliente**
+
+* Los filtros (producto, desde, hasta y texto por patente o chofer; también acepta la fecha escrita) afectan *Todos los tickets*. *Tickets del mes* no cambia.
+* La tarjeta **Total neto filtrado** suma el peso neto de los tickets **cerrados** que pasan el filtro y muestra cuántos son.
+* **Descargar Excel** exporta esas filas → `MisPesadas_2026-11-01_a_2026-11-20.csv` (con el producto si se filtró uno). El backend ya devuelve solo los tickets del proveedor del cliente.
+
+**Archivo**
+
+| Columna | Contenido |
+|---|---|
+| N° Ticket | `id` del ticket (el mismo que se ve en las tablas) |
+| Fecha y Hora | Fecha `dd/mm/aaaa` |
+| Estado | `Abierto` / `Cerrado` |
+| Proveedor | Nombre (en el cliente, siempre el suyo) |
+| Producto | Nombre, o `-` |
+| Patente, Chofer | Texto |
+| Peso Tara / Bruto / Neto (kg) | Número sin separador de miles, o `-` si está abierto |
+
+Al final: una fila vacía y la fila `TOTALES` con `X cerradas de Y`, la suma de la tara de todos los tickets exportados y la suma de bruto y neto de los cerrados.
+
+### Decisiones técnicas
+
+- **Filtrado en el navegador**: la lista ya viene completa (y limitada por rol) desde `GET /tickets/`; no hizo falta tocar el backend.
+- **Lo que se ve es lo que se exporta**: `ticketsVisibles` (admin) y `ticketsFiltrados` (cliente) alimentan la tabla y el archivo, así nunca difieren.
+- **Módulo compartido `exportar.js`**: admin y cliente generan exactamente el mismo formato.
+- **Protección contra inyección de fórmulas**: un chofer cargado como `=HYPERLINK(...)` se exporta como texto (`'=HYPERLINK(...)`). Un `-` solo (campo vacío) no se modifica.
+- **Selectores con `createElement` + `textContent` + `replaceChildren`**: sin `innerHTML`. Al recargar proveedores o productos se conserva la opción elegida.
+- **Sin dependencias nuevas**: CSV con BOM en lugar de `.xlsx`, que requeriría una librería.
+
+### Cómo probarlo
+
+1. Admin: elegir un proveedor → la tabla muestra solo sus tickets → **Exportar Excel** descarga solo esos.
+2. Admin: proveedor + *Desde* / *Hasta* → la tabla y el archivo respetan las dos condiciones; el nombre incluye el rango.
+3. Admin: un rango sin tickets → aviso "No hay tickets para exportar con los filtros seleccionados" y no se descarga nada.
+4. Cliente: cambiar fechas o producto → cambia **Total neto filtrado** → **Descargar Excel** baja esas filas.
+5. Abrir el archivo en Excel: columnas separadas, tildes y ñ correctas, fila `TOTALES` al final.
+
+### Pendientes conocidos
+
+- El ticket no guarda la hora, solo la fecha: la columna *Fecha y Hora* muestra solo la fecha. Para incluir la hora hay que agregar un campo de fecha y hora en `tickets` (y migrar los datos existentes).
+- `N° Ticket` usa el `id`; el campo opcional `numero_ticket` no se carga desde el panel.
+- Con muchos tickets, filtrar en el navegador deja de escalar: conviene mover los filtros a la API (`GET /tickets/?desde=...`) junto con la paginación pendiente.
