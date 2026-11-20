@@ -1,6 +1,7 @@
 // Usa de auth.js: API_BASE, obtenerSesion, borrarToken, cerrarSesion, fetchConToken
 const API_TICKETS = `${API_BASE}/tickets/`;
 const API_PROVEEDORES = `${API_BASE}/suppliers/`;
+const API_PRODUCTOS = `${API_BASE}/products/`;
 const PAGINA_LOGIN = "login.html";
 
 // Guardia de rol (mismo patrón que admin.js)
@@ -30,6 +31,10 @@ function mesAnteriorISO() {
 }
 
 let tickets = [];
+let productosPorId = {};
+
+const COLUMNAS_TODOS = 9;
+const COLUMNAS_MES = 6;
 
 // ---------- Utilidades ----------
 
@@ -45,6 +50,12 @@ function formatoFecha(fecha) {
 
 function formatoPeso(valor) {
     return valor === null ? "—" : valor.toLocaleString("es-AR");
+}
+
+// El producto es opcional: sin producto se muestra "—"; si no está en el mapa, su id
+function nombreProducto(productId) {
+    if (productId === null) return "—";
+    return productosPorId[productId] ?? productId;
 }
 
 function crearCelda(texto) {
@@ -117,6 +128,18 @@ async function cargarNombreProveedor() {
     }
 }
 
+// Si falla, las tablas muestran el id del producto en lugar del nombre
+async function cargarProductos() {
+    try {
+        const respuesta = await fetchConToken(API_PRODUCTOS);
+        if (!respuesta.ok) throw new Error(`GET /products/ respondió ${respuesta.status}`);
+        const productos = await respuesta.json();
+        productosPorId = Object.fromEntries(productos.map((p) => [p.id, p.name]));
+    } catch (error) {
+        console.error("Error al cargar los productos:", error);
+    }
+}
+
 // ---------- Tablas ----------
 
 function filaTicketCompleta(t) {
@@ -126,6 +149,7 @@ function filaTicketCompleta(t) {
         crearCelda(formatoFecha(t.fecha)),
         crearCelda(t.chofer),
         crearCelda(t.patente ?? "—"),
+        crearCelda(nombreProducto(t.product_id)),
         crearCelda(formatoPeso(t.peso_tara)),
         crearCelda(formatoPeso(t.peso_bruto)),
         crearCelda(formatoPeso(t.peso_neto)),
@@ -140,6 +164,7 @@ function filaTicketMes(t) {
         crearCelda(t.id),
         crearCelda(formatoFecha(t.fecha)),
         crearCelda(t.patente ?? "—"),
+        crearCelda(nombreProducto(t.product_id)),
         crearCelda(formatoPeso(t.peso_neto)),
         crearCeldaEstado(t.estado)
     );
@@ -157,9 +182,9 @@ function dibujarTablaTodos() {
     const filtrados = tickets.filter((t) => coincideConBusqueda(t, texto));
 
     if (tickets.length === 0) {
-        mostrarFilaUnica(tablaTodos, "Todavía no hay pesadas registradas", 8);
+        mostrarFilaUnica(tablaTodos, "Todavía no hay pesadas registradas", COLUMNAS_TODOS);
     } else if (filtrados.length === 0) {
-        mostrarFilaUnica(tablaTodos, "Ningún ticket coincide con la búsqueda", 8);
+        mostrarFilaUnica(tablaTodos, "Ningún ticket coincide con la búsqueda", COLUMNAS_TODOS);
     } else {
         tablaTodos.replaceChildren(...filtrados.map(filaTicketCompleta));
     }
@@ -170,7 +195,7 @@ function dibujarTablaMes() {
     const delMes = tickets.filter((t) => t.fecha.startsWith(prefijo));
 
     if (delMes.length === 0) {
-        mostrarFilaUnica(tablaMes, "No hay pesadas este mes", 5);
+        mostrarFilaUnica(tablaMes, "No hay pesadas este mes", COLUMNAS_MES);
     } else {
         tablaMes.replaceChildren(...delMes.map(filaTicketMes));
     }
@@ -187,8 +212,8 @@ async function cargarTickets() {
     } catch (error) {
         console.error("Error al cargar los tickets:", error);
         const msg = "No se pudo cargar el historial. ¿Está encendida la API?";
-        mostrarFilaUnica(tablaTodos, msg, 8);
-        mostrarFilaUnica(tablaMes, msg, 5);
+        mostrarFilaUnica(tablaTodos, msg, COLUMNAS_TODOS);
+        mostrarFilaUnica(tablaMes, msg, COLUMNAS_MES);
     }
 }
 
@@ -202,5 +227,5 @@ if (accesoPermitido) {
     actualizarReloj();
     setInterval(actualizarReloj, 1000);
     cargarNombreProveedor();
-    cargarTickets();
+    cargarProductos().then(cargarTickets); // los nombres de producto tienen que estar antes de dibujar
 }
