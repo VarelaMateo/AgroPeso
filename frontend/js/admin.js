@@ -796,6 +796,58 @@ form.addEventListener("submit", async (event) => {
     }
 });
 
+// ---------- Copia de seguridad de la base ----------
+
+// Solo se descarga cuando el admin toca el botón (si se descargara solo, lo haría en cada PC
+// donde se abra el panel). El respaldo automático diario lo hace el servidor.
+const API_BACKUP = `${API}/backup/descargar`;
+const botonBackup = document.getElementById("btn-backup");
+let descargandoBackup = false;
+
+// El nombre lo decide el servidor (con su fecha); si no llega el encabezado, se usa la fecha local
+function nombreDelBackup(respuesta) {
+    const encabezado = respuesta.headers.get("Content-Disposition") ?? "";
+    const coincidencia = encabezado.match(/filename="([^"]+)"/);
+    return coincidencia ? coincidencia[1] : `agropeso_backup_${fechaDeHoy()}.sql`;
+}
+
+// Devuelve el nombre del archivo descargado, o null si falló
+async function descargarBackup() {
+    if (descargandoBackup) return null;
+    descargandoBackup = true;
+    botonBackup.disabled = true;
+    try {
+        const respuesta = await fetchConToken(API_BACKUP);
+        if (!respuesta.ok) {
+            const cuerpo = await respuesta.json().catch(() => ({}));
+            mostrarMensaje(`No se pudo generar el backup: ${cuerpo.detail ? textoDeError(cuerpo.detail) : respuesta.status}`, "error");
+            return null;
+        }
+        const nombre = nombreDelBackup(respuesta);
+        const url = URL.createObjectURL(await respuesta.blob());
+        const enlace = document.createElement("a");
+        enlace.href = url;
+        enlace.download = nombre;
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        URL.revokeObjectURL(url);
+        return nombre;
+    } catch (error) {
+        console.error("Error al descargar el backup:", error);
+        mostrarMensaje("No se pudo conectar con el servidor para descargar el backup.", "error");
+        return null;
+    } finally {
+        descargandoBackup = false;
+        botonBackup.disabled = false;
+    }
+}
+
+async function descargarBackupManual() {
+    const nombre = await descargarBackup();
+    if (nombre) mostrarMensaje(`Copia de seguridad descargada: ${nombre}`, "ok");
+}
+
 // ---------- Botones y arranque ----------
 
 document.getElementById("btn-logout").addEventListener("click", cerrarSesion);
@@ -803,6 +855,7 @@ document.getElementById("btn-cerrar").addEventListener("click", cerrarTicketPorI
 document.getElementById("btn-proveedor").addEventListener("click", agregarProveedores);
 document.getElementById("btn-producto").addEventListener("click", agregarProducto);
 document.getElementById("btn-cliente").addEventListener("click", abrirModalCliente);
+botonBackup.addEventListener("click", descargarBackupManual);
 
 async function iniciar() {
     document.getElementById("nombre-usuario").textContent = sesion.username;

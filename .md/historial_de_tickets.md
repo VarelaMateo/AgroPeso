@@ -807,3 +807,54 @@ El administrador puede corregir cualquier ticket ya creado (patente, chofer, pro
 
 - No hay registro de auditoría: no queda guardado quién editó un ticket ni qué valores tenía antes.
 - No se puede editar `fecha`, `transporte` ni `numero_ticket` (no estaban en el alcance del ticket).
+
+---
+
+## AGROPESO-027: Copia de seguridad total de la base y respaldo automático cada 24 hs
+
+El administrador puede descargar un volcado completo de la base (proveedores, productos, usuarios y tickets) en `agropeso_backup_YYYY-MM-DD.sql`. Además, el servidor guarda un backup por día en disco.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `backend/repository/backup_repository.py` | **Nuevo**: `leer_tabla(tabla)` devuelve todas las filas ordenadas por `id` |
+| `backend/services/backup_service.py` | **Nuevo**: `generar_sql` (metadatos + `INSERT INTO` escapados por SQLAlchemy para MySQL) y `guardar_backup_del_dia` |
+| `backend/routers/backup_router.py` | **Nuevo**: `GET /backup/descargar` (solo admin) |
+| `backend/utils/backup_automatico.py` | **Nuevo**: tarea de fondo que cada hora crea el backup del día si falta |
+| `backend/main.py` | `lifespan` que lanza la tarea, router de backup y `expose_headers=["Content-Disposition"]` en CORS |
+| `backend/tests/test_backup.py` | **Nuevo**: 7 tests |
+| `frontend/html/admin.html` | Botón **Descargar Backup DB** debajo de *Cargar cliente* |
+| `frontend/js/admin.js` | `descargarBackup` y `descargarBackupManual` (descarga con `Blob` + aviso) |
+| `.gitignore` | `backend/backups/` |
+| `.md/documentacion_de_la_api.md`, `.md/guia_de_desarrollo.md` | Endpoint, formato, cómo restaurar y limitaciones |
+
+### Cómo funciona
+
+| Situación | Resultado |
+|---|---|
+| Admin hace clic en **Descargar Backup DB** | Descarga `agropeso_backup_<fecha del servidor>.sql` y muestra "Copia de seguridad descargada: ..." |
+| Admin abre el panel | No descarga nada |
+| La API arranca o pasa una hora | Si no existe `backend/backups/agropeso_backup_<hoy>.sql`, lo genera |
+| Cliente / sin token llama al endpoint | `403` / `401` |
+
+### Decisiones técnicas
+
+- **SQL con `INSERT INTO` en lugar de JSON**: se restaura directo con `mysql`, sin escribir un script de importación. Los metadatos que pedía el ticket (`fecha_generacion` y totales) van como comentarios al principio.
+- **Los valores los escapa SQLAlchemy** (`compile(dialect=mysql, literal_binds=True)`): comillas, barras invertidas, `NULL` y fechas quedan bien sin armar el SQL a mano.
+- **Orden de tablas por claves foráneas** (`suppliers` → `products` → `users` → `tickets`) y `FOREIGN_KEY_CHECKS = 0` durante la carga.
+- **Escritura atómica en disco**: se escribe un `.tmp` y se renombra, así nunca queda un `.sql` cortado que impida generar el del día.
+- **La tarea de fondo corre la consulta en otro hilo** (`asyncio.to_thread`) para no frenar la API, y si falla lo registra en el log y sigue intentando cada hora.
+- **El nombre del archivo lo decide el servidor** (header `Content-Disposition`); si el navegador no puede leerlo, usa la fecha local.
+- **Sin descarga automática en el navegador**: el ticket pedía un temporizador con `localStorage` que descargara solo cada 24 hs, pero como la marca es por navegador, se descargaría en cada PC donde se abra el panel. Se dejó solo el botón; el respaldo automático diario lo hace el servidor.
+
+### Verificación
+
+- 132 tests pasan (7 nuevos).
+- Se restauró el backup de la base local dentro de una transacción (borrar todo → ejecutar el `.sql` → comparar → `ROLLBACK`): mismas cantidades, ids, suma de neto, nombres, usuarios y hashes. La base quedó intacta.
+- En el navegador: el botón descarga el archivo con el nombre del servidor y muestra el aviso; al abrir el panel no se descarga nada.
+
+### Pendientes conocidos
+
+- En Railway, `backend/backups/` se pierde en cada deploy: conviene activar los backups del servicio MySQL de Railway o subir los archivos a un almacenamiento externo.
+- No se borran los backups viejos de `backend/backups/` (uno por día): si crece mucho, agregar una limpieza (por ejemplo, conservar los últimos 30).
