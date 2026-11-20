@@ -187,3 +187,57 @@
   .tema-oscuro .barra-superior, .tema-oscuro .contenido { padding-left: 16px; padding-right: 16px; }
   .tema-oscuro .botones-barra { margin-left: 0; }
 }
+
+/* ---------- Panel admin en oscuro ----------
+   admin.html usa clases de W3.CSS que traen !important: se pisan acá, solo con body.tema-oscuro. */
+
+body.tema-oscuro.w3-white { background-color: var(--fondo) !important; color: var(--texto) !important; }
+.tema-oscuro .w3-text-grey { color: var(--texto-suave) !important; }
+.tema-oscuro .w3-light-grey { background-color: var(--neutro) !important; color: var(--texto) !important; }
+.tema-oscuro .tarjeta-stat.w3-light-grey,
+.tema-oscuro .buscador-caja.w3-light-grey { background-color: var(--tarjeta) !important; border: 1px solid var(--borde); }
+.tema-oscuro .w3-button:hover { background-color: #353b38 !important; color: var(--texto) !important; }
+
+.tema-oscuro .w3-input:not(.w3-transparent),
+.tema-oscuro .w3-select {
+  background-color: var(--campo) !important;
+  color: var(--texto) !important;
+  border-color: var(--borde) !important;
+}
+.tema-oscuro .w3-input.w3-transparent { color: var(--texto); }
+.tema-oscuro .w3-input:focus, .tema-oscuro .w3-select:focus { border-color: var(--verde) !important; outline: none; }
+
+.tema-oscuro .tarjeta-brillo {
+  background:
+    radial-gradient(circle at 100% 100%, rgba(139, 195, 74, 0.25) 0%, rgba(139, 195, 74, 0) 55%),
+    var(--tarjeta);
+  border: 1px solid var(--borde);
+}
+.tema-oscuro .caja-punteada { border-color: #3a403d; background: var(--tarjeta); }
+.tema-oscuro .w3-bordered tr { border-bottom-color: #262a28; }
+.tema-oscuro .w3-hoverable tbody tr:hover { background-color: #252927; }
+
+.tema-oscuro .w3-modal { background-color: rgba(0, 0, 0, 0.7); }
+.tema-oscuro .w3-modal-content { background-color: var(--tarjeta); color: var(--texto); border: 1px solid var(--borde); }
+.tema-oscuro .w3-pale-green { background-color: rgba(139, 195, 74, 0.12) !important; color: #c5e1a5 !important; }
+.tema-oscuro .w3-pale-red { background-color: rgba(244, 67, 54, 0.12) !important; color: #ef9a9a !important; }
+
+/* ---------- Botón flotante claro / oscuro (fuera del tema: se ve en los dos) ---------- */
+
+.boton-tema {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2; /* debajo de los modales de W3 (z-index 3): un modal abierto lo tapa */
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid #c4c4c4;
+  background: #fff;
+  color: #222;
+  font: 500 14px "Poppins", sans-serif;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+body:has(> .boton-tema) { padding-bottom: 72px; } /* que el botón flotante no tape la última fila */
+.boton-tema:focus-visible { outline: 2px solid #8bc34a; outline-offset: 2px; }
+.tema-oscuro .boton-tema { background: var(--tarjeta); color: var(--texto); border-color: var(--borde); }
