@@ -5,7 +5,7 @@ from repository.supplier_repository import SupplierRepository
 from repository.ticket_repository import TicketRepository
 from models.ticket_model import EstadoTicket, Ticket
 from models.user_model import Rol
-from utils.exceptions import ReglaNegocioError, TicketNoEncontradoError
+from utils.exceptions import ReferenciaNoEncontradaError, ReglaNegocioError, TicketNoEncontradoError
 
 
 class TicketService:
@@ -35,6 +35,38 @@ class TicketService:
 
         ticket.peso_bruto = peso_bruto
         ticket.estado = EstadoTicket.CERRADO
+
+        actualizado = self.repository.update_ticket(ticket)
+        if actualizado is None:
+            raise TicketNoEncontradoError(f"No existe el ticket con id {ticket_id}")
+        return actualizado
+
+    def editar_ticket(self, ticket_id: int, chofer: str, patente: Optional[str], peso_tara: int,
+                      peso_bruto: Optional[int], supplier_id: int, product_id: Optional[int]) -> Ticket:
+        ticket = self.obtener_ticket(ticket_id)
+
+        if self.supplier_repository.get_supplier_by_id(supplier_id) is None:
+            raise ReferenciaNoEncontradaError(f"No existe el proveedor con id {supplier_id}")
+        if product_id is not None and self.product_repository.get_product_by_id(product_id) is None:
+            raise ReferenciaNoEncontradaError(f"No existe el producto con id {product_id}")
+
+        if peso_bruto is None:
+            # Un ticket cerrado no se puede reabrir quitándole el bruto
+            if ticket.estado == EstadoTicket.CERRADO:
+                raise ReglaNegocioError(f"El ticket {ticket_id} esta cerrado: el peso bruto es obligatorio")
+            estado = EstadoTicket.ABIERTO
+        else:
+            # Cerrado, o abierto al que se le carga el bruto: se valida y queda cerrado
+            self.validar_pesos(peso_tara, peso_bruto)
+            estado = EstadoTicket.CERRADO
+
+        ticket.chofer = chofer
+        ticket.patente = patente
+        ticket.peso_tara = peso_tara
+        ticket.peso_bruto = peso_bruto  # el neto se recalcula solo (bruto - tara)
+        ticket.supplier_id = supplier_id
+        ticket.product_id = product_id
+        ticket.estado = estado
 
         actualizado = self.repository.update_ticket(ticket)
         if actualizado is None:

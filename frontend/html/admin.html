@@ -283,6 +283,51 @@
     </div>
   </div>
 
+  <!-- Modal para editar un ticket (abierto o cerrado) -->
+  <div id="modal-editar-ticket" class="w3-modal">
+    <div class="w3-modal-content w3-card-4 w3-animate-top" style="max-width: 460px;">
+      <header class="w3-container w3-green">
+        <h3 id="editar-titulo">Editar ticket</h3>
+      </header>
+      <form id="form-editar" class="w3-container w3-padding-16" novalidate>
+        <p>
+          <label for="editar-chofer" class="w3-text-grey">Chofer</label>
+          <input id="editar-chofer" class="w3-input w3-border w3-round" maxlength="200" autocomplete="off">
+        </p>
+        <p>
+          <label for="editar-patente" class="w3-text-grey">Patente</label>
+          <input id="editar-patente" class="w3-input w3-border w3-round" maxlength="11" autocomplete="off">
+        </p>
+        <p>
+          <label for="editar-proveedor" class="w3-text-grey">Proveedor</label>
+          <select id="editar-proveedor" class="w3-select w3-border w3-round"></select>
+        </p>
+        <p>
+          <label for="editar-producto" class="w3-text-grey">Producto</label>
+          <select id="editar-producto" class="w3-select w3-border w3-round"></select>
+        </p>
+        <div class="w3-row-padding" style="margin: 0 -16px;">
+          <p class="w3-half">
+            <label for="editar-tara" class="w3-text-grey">Peso tara (kg)</label>
+            <input id="editar-tara" type="number" min="1" step="1" class="w3-input w3-border w3-round">
+          </p>
+          <p class="w3-half">
+            <label for="editar-bruto" class="w3-text-grey" id="editar-bruto-label">Peso bruto (kg)</label>
+            <input id="editar-bruto" type="number" min="1" step="1" class="w3-input w3-border w3-round">
+          </p>
+        </div>
+        <p id="editar-ayuda" class="w3-small w3-text-grey"></p>
+        <p class="w3-large">Peso neto: <b id="editar-neto">—</b></p>
+        <p id="editar-error" class="w3-text-red w3-small" role="alert" style="display: none;"></p>
+        <div class="w3-right">
+          <button type="button" id="editar-cancelar" class="w3-button w3-round w3-light-grey">Cancelar</button>
+          <button type="submit" id="editar-guardar" class="w3-button w3-round w3-green">Guardar cambios</button>
+        </div>
+        <div class="w3-clear"></div>
+      </form>
+    </div>
+  </div>
+
   <script src="../js/auth.js"></script>
   <script src="../js/exportar.js"></script>
   <script src="../js/admin.js"></script>
