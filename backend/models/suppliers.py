@@ -16,7 +16,7 @@ class Supplier(Base):
     __tablename__ = "suppliers"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(200), nullable=False)
+    name = Column(String(200), nullable=False, unique=True)
     cuit = Column(String(11), nullable=True, unique=True)
     phone = Column(String(20), nullable=True)
     fecha_alta = Column(Date, server_default=func.curdate(), nullable=False)

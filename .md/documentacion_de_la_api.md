@@ -48,10 +48,11 @@
 | Código | Cuándo ocurre |
 |---|---|
 | **200 / 201** | La operación se realizó correctamente. |
-| **400** | Violación de regla de negocio (ej: bruto no es mayor a la tara, o ticket ya cerrado). |
+| **400** | Violación de regla de negocio (ej: bruto no es mayor a la tara, ticket ya cerrado o `supplier_id` inexistente). |
 | **404** | No existe el ticket solicitado. |
+| **409** | Ya existe un proveedor con ese nombre (sin distinguir mayúsculas). |
 | **422** | El JSON no cumple el formato (tipos incorrectos, valores negativos, filtro de estado inválido). |
-| **500** | Error interno (ej: `supplier_id` inexistente rechazada por MySQL). |
+| **500** | Error interno (ej: `numero_ticket` repetido o `product_id` inexistente, rechazados por MySQL). |
 
 ---
 #### Autorización y Permisos en Tickets
@@ -101,7 +102,7 @@ Todos los endpoints de `/tickets` requieren enviar el token JWT en el encabezado
 | Método | Ruta | Descripción | Respuesta |
 |---|---|---|---|
 | GET | `/suppliers/` | Lista los proveedores, ordenados por nombre | `list[SupplierResponse]` (200) |
-| POST | `/suppliers/` | Crea un proveedor | `SupplierResponse` (201) |
+| POST | `/suppliers/` | Crea un proveedor. Si el nombre ya existe (sin distinguir mayúsculas) responde 409 | `SupplierResponse` (201) |
 
 #### Autorización y Permisos en Proveedores
 
@@ -151,7 +152,6 @@ Petición:
 ---
 
 ## Pendientes conocidos
-* Si el `supplier_id` no existe o el `numero_ticket` está repetido, MySQL rechaza la operación y la API responde 500. Falta traducirlo a un error controlado (409).
-* No se impide crear dos proveedores con el mismo nombre.
+* Si el `numero_ticket` está repetido o el `product_id` no existe, MySQL rechaza la operación y la API responde 500. Falta traducirlo a un error controlado.
 * Asunción: La primera pesada es la tara. Revaluar si hay camiones que llegan cargados.
 * Paginación pendiente para el `GET /tickets/`.

@@ -1,16 +1,19 @@
 from typing import Optional
 
+from repository.supplier_repository import SupplierRepository
 from repository.ticket_repository import TicketRepository
 from models.ticket_model import EstadoTicket, Ticket
 from models.user_model import Rol
-from utils.exceptions import ReglaNegocioError, TicketNoEncontradoError 
+from utils.exceptions import ReglaNegocioError, TicketNoEncontradoError
 
 
 class TicketService:
-    def __init__(self, repository: TicketRepository):
+    def __init__(self, repository: TicketRepository, supplier_repository: SupplierRepository):
         self.repository = repository
+        self.supplier_repository = supplier_repository
 
     def registrar_pesada(self, ticket: Ticket) -> Ticket:
+        self.validar_proveedor(ticket.supplier_id)
         if (ticket.peso_bruto is None):
             ticket.estado = EstadoTicket.ABIERTO
         else:
@@ -52,6 +55,10 @@ class TicketService:
                 return[] #Un cliente sin proveedor no debe nada
             return self.repository.get_all_tickets(estado = estado, supplier_id = user.supplier_id)
         return self.repository.get_all_tickets(estado = estado)
+
+    def validar_proveedor(self, supplier_id: int) -> None:
+        if self.supplier_repository.get_supplier_by_id(supplier_id) is None:
+            raise ReglaNegocioError(f"No existe el proveedor con id {supplier_id}")
 
     def validar_pesos (self, peso_tara: int, peso_bruto: int) -> None:
         if peso_tara >= peso_bruto:

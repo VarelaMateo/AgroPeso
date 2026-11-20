@@ -476,3 +476,51 @@ La vista operativa se transformó en el panel de control del administrador, con 
 - **Agregar producto** solo muestra un aviso: no existe aún el endpoint de productos.
 - "Hoy" se calcula con la fecha del navegador y la API usa la fecha del servidor; si MySQL corre en UTC, un ticket cargado por la noche puede quedar con la fecha del día siguiente.
 - `cliente.html` (vista de cliente de solo lectura) queda para el próximo ticket.
+
+---
+
+## AGROPESO-022: Validación de existencia y unicidad de proveedores (backend)
+
+La API ya no responde 500 cuando se crea un ticket con un proveedor inexistente, y no permite registrar dos proveedores con el mismo nombre.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `utils/exceptions.py` | Nueva excepción `ProveedorDuplicadoError` |
+| `repository/supplier_repository.py` | Nuevos `get_supplier_by_id` y `get_supplier_by_name` (sin distinguir mayúsculas); `create_supplier` traduce el `IntegrityError` de la restricción única a `ProveedorDuplicadoError` |
+| `services/supplier_service.py` | `crear_proveedor` rechaza nombres repetidos |
+| `routers/supplier_router.py` | Traduce `ProveedorDuplicadoError` a 409 |
+| `services/ticket_service.py` | Recibe también un `SupplierRepository`; nueva regla `validar_proveedor` |
+| `routers/ticket_router.py` | Helper `crear_servicio(db)` que arma el servicio con sus dos repositorios |
+| `models/suppliers.py` | `name` con `unique=True` |
+| `tests/test_server.py`, `tests/test_suppliers.py` | Tests de las nuevas reglas y de las búsquedas del repositorio |
+| `tests/test_endpoints.py` | Tests HTTP de 409 y 400 contra la base real (con rollback) |
+
+### Cómo funciona
+
+| Situación | Antes | Ahora |
+|---|---|---|
+| `POST /tickets/` con `supplier_id` inexistente | 500 (error de clave foránea de MySQL) | **400** `No existe el proveedor con id X` |
+| `POST /suppliers/` con un nombre que ya existe (`Berg`, `berg`, `BERG`) | Se creaba un duplicado | **409** `Ya existe un proveedor con el nombre 'X'` |
+
+### Decisiones técnicas
+
+- **Validar en el servicio, antes de tocar la base**: el error de MySQL se evita en lugar de atraparlo, así el mensaje es claro y no depende del texto del driver.
+- **Proveedor inexistente → 400 (`ReglaNegocioError`)**: es un dato inválido dentro del ticket, no un recurso faltante en la URL (eso sería 404). Se reutiliza la excepción y el router no cambia.
+- **Duplicado → 409 Conflict**: el formato es válido, pero choca con un dato que ya existe.
+- **Inyección de `SupplierRepository` en `TicketService`**: el servicio de tickets consulta proveedores a través de su repositorio, sin importar SQLAlchemy. En los tests se reemplaza por uno en memoria.
+- **Restricción `UNIQUE` en la base**: es la garantía final si dos administradores crean el mismo proveedor al mismo tiempo. En ese caso el repositorio atrapa el `IntegrityError`, hace rollback y lanza `ProveedorDuplicadoError`, así la respuesta también es 409. `create_all` no agrega la restricción a tablas existentes; ver la guía de desarrollo.
+- **Frontend sin cambios**: `admin.js` ya muestra el `detail` de la API en el modal de error.
+
+### Cómo probarlo
+
+1. En una base existente, agregar la restricción única (ver *Guía de Desarrollo → Base de Datos*).
+2. En `/docs`, como admin, `POST /suppliers/` con un nombre existente en otra combinación de mayúsculas: debe responder 409.
+3. `POST /tickets/` con `"supplier_id": 9999`: debe responder 400 con el mensaje del proveedor.
+4. Desde `admin.html`, agregar un proveedor repetido: el modal muestra el error.
+5. Ejecutar `pytest`.
+
+### Pendientes conocidos
+
+- `numero_ticket` repetido y `product_id` inexistente siguen respondiendo 500 (el segundo se resuelve junto con el CRUD de productos).

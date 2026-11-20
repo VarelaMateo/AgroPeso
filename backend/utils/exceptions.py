@@ -3,3 +3,6 @@ class ReglaNegocioError(Exception):
 
 class TicketNoEncontradoError(Exception):
     pass
+
+class ProveedorDuplicadoError(Exception):
+    pass

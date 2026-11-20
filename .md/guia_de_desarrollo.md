@@ -63,6 +63,12 @@ ALTER TABLE tickets
   ADD COLUMN estado VARCHAR(10) NOT NULL DEFAULT 'abierto';
 UPDATE tickets SET estado = 'cerrado' WHERE peso_bruto IS NOT NULL;"
 ```
+Desde AGROPESO-022 el nombre del proveedor es único. En una base existente hay que agregar la restricción a mano (antes, verificar que no haya nombres repetidos):
+
+```sql
+sudo mysql AgroPeso -e "ALTER TABLE suppliers ADD CONSTRAINT uq_suppliers_name UNIQUE (name);"
+```
+
 *A futuro, se implementarán migraciones con Alembic para evitar el uso de `ALTER TABLE` manual.*
 
 ---
@@ -87,5 +93,5 @@ pytest
 ```
 * `test_schemas.py`: Valida los esquemas de Pydantic.
 * `test_server.py`: Valida las reglas de negocio en memoria.
-* `test_endpoints.py`: Verifica los 401 (sin token o token inválido) y los 403 (cliente intentando escribir) usando `TestClient`; no necesita base de datos.
+* `test_endpoints.py`: Verifica con `TestClient` los 401 (sin token o token inválido) y los 403 (cliente intentando escribir), sin base de datos. Los tests de 409/400 de proveedores sí usan la base real (con rollback).
 * `test_repository.py`: Prueba contra la base real. Requiere MariaDB encendido; usa fixtures para deshacer los cambios (no deja basura en la BD).
