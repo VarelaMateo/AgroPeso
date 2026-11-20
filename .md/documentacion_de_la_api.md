@@ -48,11 +48,11 @@
 | Código | Cuándo ocurre |
 |---|---|
 | **200 / 201** | La operación se realizó correctamente. |
-| **400** | Violación de regla de negocio (ej: bruto no es mayor a la tara, ticket ya cerrado o `supplier_id` inexistente). |
+| **400** | Violación de regla de negocio (ej: bruto no es mayor a la tara, ticket ya cerrado, `supplier_id` o `product_id` inexistente). |
 | **404** | No existe el ticket solicitado. |
-| **409** | Ya existe un proveedor con ese nombre (sin distinguir mayúsculas). |
+| **409** | Ya existe un proveedor o producto con ese nombre (sin distinguir mayúsculas). |
 | **422** | El JSON no cumple el formato (tipos incorrectos, valores negativos, filtro de estado inválido). |
-| **500** | Error interno (ej: `numero_ticket` repetido o `product_id` inexistente, rechazados por MySQL). |
+| **500** | Error interno (ej: `numero_ticket` repetido, rechazado por MySQL). |
 
 ---
 #### Autorización y Permisos en Tickets
@@ -113,6 +113,34 @@ Todos los endpoints de `/tickets` requieren enviar el token JWT en el encabezado
 
 ---
 
+## Productos
+
+#### Endpoints
+
+| Método | Ruta | Descripción | Respuesta |
+|---|---|---|---|
+| GET | `/products/` | Lista los productos, ordenados por nombre | `list[ProductResponse]` (200) |
+| POST | `/products/` | Crea un producto. Si el nombre ya existe (sin distinguir mayúsculas) responde 409 | `ProductResponse` (201) |
+
+#### Autorización y Permisos en Productos
+
+| Endpoint | Admin | Cliente | Sin token |
+|---|---|---|---|
+| `GET /products/` | ✅ | ✅ | 401 |
+| `POST /products/` | ✅ | 403 | 401 |
+
+#### Esquemas
+
+| Esquema | Campo | Tipo | Regla |
+|---|---|---|---|
+| `ProductCreate` | `name` | texto | Obligatorio, sin espacios en los extremos, no vacío, máx 200 caracteres. (Forbid extra) |
+| `ProductResponse` | `id` | entero | Asignado por la base de datos |
+| `ProductResponse` | `name` | texto | Nombre del producto |
+
+Al crear un ticket, `product_id` es opcional; si se envía y no existe, la API responde 400.
+
+---
+
 ## Autenticación (Auth)
 
 #### Endpoints
@@ -152,6 +180,6 @@ Petición:
 ---
 
 ## Pendientes conocidos
-* Si el `numero_ticket` está repetido o el `product_id` no existe, MySQL rechaza la operación y la API responde 500. Falta traducirlo a un error controlado.
+* Si el `numero_ticket` está repetido, MySQL rechaza la operación y la API responde 500. Falta traducirlo a un error controlado.
 * Asunción: La primera pesada es la tara. Revaluar si hay camiones que llegan cargados.
 * Paginación pendiente para el `GET /tickets/`.

@@ -6,3 +6,6 @@ class TicketNoEncontradoError(Exception):
 
 class ProveedorDuplicadoError(Exception):
     pass
+
+class ProductoDuplicadoError(Exception):
+    pass

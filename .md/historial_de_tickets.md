@@ -524,3 +524,65 @@ La API ya no responde 500 cuando se crea un ticket con un proveedor inexistente,
 ### Pendientes conocidos
 
 - `numero_ticket` repetido y `product_id` inexistente siguen respondiendo 500 (el segundo se resuelve junto con el CRUD de productos).
+
+---
+
+## AGROPESO-023: Flujo completo de productos (backend + frontend admin)
+
+El botón **Cargar producto** del panel del administrador ya crea productos reales, y el formulario de nuevo ticket permite elegir uno (opcional).
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `models/products.py` | Nueva entidad pura `ProductEntity` (el modelo `Product` ya existía) |
+| `repository/product_repository.py` | Nuevo: `get_all_products`, `get_product_by_id`, `get_product_by_name` (sin distinguir mayúsculas) y `create_product` (traduce el `IntegrityError` a `ProductoDuplicadoError`) |
+| `services/product_service.py` | Nuevo: listar y crear, rechazando nombres repetidos |
+| `schemas/product_schema.py` | Nuevo: `ProductCreate` y `ProductResponse` |
+| `routers/product_router.py` | Nuevo: `GET /products/` y `POST /products/` |
+| `main.py` | Registra el router de productos |
+| `utils/exceptions.py` | Nueva excepción `ProductoDuplicadoError` |
+| `services/ticket_service.py` | Recibe un `ProductRepository`; nueva regla `validar_producto` |
+| `routers/ticket_router.py` | `crear_servicio(db)` agrega el `ProductRepository` |
+| `frontend/html/admin.html` | Nuevo desplegable **Producto (opcional)** en el formulario |
+| `frontend/js/admin.js` | `cargarProductos`, `agregarProducto` y `product_id` en el envío del ticket |
+| `tests/test_products.py` | Nuevo: esquemas, servicio, repositorio e `IntegrityError` simulado |
+| `tests/test_server.py`, `tests/test_endpoints.py`, `tests/conftest.py` | Tests de `product_id` en tickets, permisos y 409 de productos; fixture `producto` |
+
+### Cómo funciona
+
+| Acción | Resultado |
+|---|---|
+| `GET /products/` | Lista de productos ordenada por nombre (admin y cliente) |
+| `POST /products/` (admin) | 201 con el producto; 409 si el nombre ya existe; 403 si es cliente |
+| `POST /tickets/` con `product_id` inexistente | 400 `No existe el producto con id X` (antes: 500) |
+| `POST /tickets/` sin `product_id` | Igual que antes: el producto es opcional |
+
+En el panel:
+
+1. Al iniciar, proveedores y productos se cargan en paralelo (`Promise.all`) antes que los tickets.
+2. **Cargar producto** abre el modal; valida nombre vacío o de más de 200 caracteres antes de llamar a la API.
+3. Si se crea, el desplegable se recarga y aparece el mensaje verde. Si la API responde 409, el modal muestra el detalle.
+4. El desplegable empieza en **Sin producto**, que se puede elegir y envía `product_id: null`. `form.reset()` vuelve a esa opción.
+
+### Decisiones técnicas
+
+- **Mismo patrón que proveedores**: entidad pura, repositorio como frontera, validación de duplicados en el servicio y `UNIQUE` en la base como garantía ante altas simultáneas.
+- **La tabla `products` ya existía con `UNIQUE (name)`**: no hace falta migración.
+- **`GET /products/` visible para clientes**: el catálogo de productos no es información sensible.
+- **Primera opción seleccionable** (a diferencia de proveedores): el producto es opcional, así que "Sin producto" es una elección válida.
+
+### Cómo probarlo
+
+1. Reiniciar uvicorn (o esperar el `--reload`) y forzar la recarga de `admin.html` con `Ctrl + Shift + R`.
+2. **Cargar producto** con el nombre vacío: el modal muestra el error sin llamar a la API.
+3. Crear "Soja": aparece en el desplegable del formulario.
+4. Crear "soja": el modal muestra el 409.
+5. Registrar una pesada con y sin producto.
+6. Ejecutar `pytest`.
+
+### Pendientes conocidos
+
+- La tabla de tickets del panel todavía no muestra el producto.
+- `numero_ticket` repetido sigue respondiendo 500.
+- No se pueden editar ni borrar productos.

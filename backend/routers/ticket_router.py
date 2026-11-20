@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from config.database import get_db
 from models.ticket_model import Ticket, EstadoTicket
+from repository.product_repository import ProductRepository
 from repository.supplier_repository import SupplierRepository
 from repository.ticket_repository import TicketRepository
 from schemas.ticket_schema import TicketCreate, TicketResponse, TicketClose
@@ -17,7 +18,7 @@ from models.user_model import UsuarioActual
 router = APIRouter(prefix="/tickets", tags=["Tickets"])
 
 def crear_servicio(db: Session) -> TicketService:
-    return TicketService(TicketRepository(db), SupplierRepository(db))
+    return TicketService(TicketRepository(db), SupplierRepository(db), ProductRepository(db))
 
 @router.post("/", response_model=TicketResponse, status_code=201)
 def create_ticket(datos: TicketCreate, db: Session = Depends(get_db), user: UsuarioActual = Depends(get_current_user)):

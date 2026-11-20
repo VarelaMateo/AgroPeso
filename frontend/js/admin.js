@@ -1,6 +1,7 @@
 const API = "http://127.0.0.1:8000";
 const API_TICKETS = `${API}/tickets/`;
 const API_PROVEEDORES = `${API}/suppliers/`;
+const API_PRODUCTOS = `${API}/products/`;
 const PAGINA_LOGIN = "login.html";
 
 // Guardia de rol. obtenerSesion, borrarToken y fetchConToken vienen de auth.js
@@ -21,6 +22,7 @@ const tablaHistorial = document.getElementById("tabla-historial");
 const tituloTabla = document.getElementById("titulo-tabla");
 const buscador = document.getElementById("buscador");
 const selectProveedores = document.getElementById("supplier_id");
+const selectProductos = document.getElementById("product_id");
 const statTicketsMes = document.getElementById("stat-tickets-mes");
 const listaTopProveedores = document.getElementById("lista-top-proveedores");
 
@@ -346,6 +348,59 @@ async function agregarProveedores() {
     }
 }
 
+// Productos
+
+async function cargarProductos() {
+    try {
+        const respuesta = await fetchConToken(API_PRODUCTOS);
+        if (!respuesta.ok) throw new Error(`Error ${respuesta.status}`);
+        const productos = await respuesta.json();
+
+        // El producto es opcional: la primera opción se puede elegir y envía null
+        const sinProducto = crearOpcion("", productos.length === 0 ? "No hay productos cargados" : "Sin producto");
+        sinProducto.defaultSelected = true; // form.reset() vuelve a esta opción
+        const opciones = [sinProducto];
+        for (const p of productos) opciones.push(crearOpcion(p.id, p.name));
+        selectProductos.replaceChildren(...opciones);
+    } catch (error) {
+        console.error("Error al cargar los productos: ", error);
+        selectProductos.replaceChildren(crearOpcion("", "No se pudieron cargar los productos", true));
+    }
+}
+
+async function agregarProducto() {
+    const nombre = await pedirDato({
+        titulo: "Agregar producto",
+        texto: "Nombre del nuevo producto",
+        placeholder: "Ej: Soja",
+        textoAceptar: "Guardar",
+        validar: (v) => {
+            if (v === "") return "El nombre es obligatorio";
+            if (v.length > 200) return "Máximo 200 caracteres";
+            return null;
+        },
+    });
+    if (nombre === null) return;
+
+    try {
+        const respuesta = await fetchConToken(API_PRODUCTOS, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: nombre }),
+        });
+        if (!respuesta.ok) {
+            const error = await respuesta.json().catch(() => ({}));
+            await avisar(`No se pudo crear el producto: ${error.detail ? textoDeError(error.detail) : respuesta.status}`, "Error");
+            return;
+        }
+        await cargarProductos();
+        mostrarMensaje(`Producto "${nombre}" creado`, "ok");
+    } catch (error) {
+        console.error("Error al crear el producto:", error);
+        await avisar("No se pudo conectar con el servidor.", "Error");
+    }
+}
+
 // Cerrar ticket
 
 async function cerrarTicket(id) {
@@ -402,6 +457,7 @@ form.addEventListener("submit", async (event) => {
         peso_tara: Number(form.peso_tara.value),
         peso_bruto: brutoTexto === "" ? null : Number(brutoTexto),
         supplier_id: Number(form.supplier_id.value),
+        product_id: form.product_id.value === "" ? null : Number(form.product_id.value),
     };
 
     botonSubmit.disabled = true;
@@ -438,13 +494,11 @@ form.addEventListener("submit", async (event) => {
 document.getElementById("btn-logout").addEventListener("click", cerrarSesion);
 document.getElementById("btn-cerrar").addEventListener("click", cerrarTicketPorId);
 document.getElementById("btn-proveedor").addEventListener("click", agregarProveedores);
-document.getElementById("btn-producto").addEventListener("click", () => {
-    avisar("Todavía no existe el endpoint de productos en el backend. Queda para un ticket posterior.", "Agregar producto");
-});
+document.getElementById("btn-producto").addEventListener("click", agregarProducto);
 
 async function iniciar() {
     document.getElementById("nombre-usuario").textContent = sesion.username;
-    await cargarProveedores();
+    await Promise.all([cargarProveedores(), cargarProductos()]);
     await cargarTickets();
 }
 

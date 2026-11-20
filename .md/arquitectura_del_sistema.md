@@ -44,6 +44,16 @@ El mismo principio de separación de responsabilidades se aplica a los proveedor
 
 El `SupplierRepository` actúa como frontera: recibe `SupplierEntity` de la capa de negocio, la convierte a `Supplier` para la base de datos, y devuelve nuevamente una `SupplierEntity`.
 
+Productos sigue el mismo patrón:
+
+| Clase | Capa | Para qué sirve |
+|---|---|---|
+| `Product` | Acceso a datos | Modelo de SQLAlchemy en la tabla `products` |
+| `ProductEntity` | Negocio | Entidad pura de dominio |
+| `ProductCreate` / `ProductResponse` | Presentación | Esquemas Pydantic para validar los JSON en la API |
+
+`TicketService` recibe por inyección `TicketRepository`, `SupplierRepository` y `ProductRepository`, para validar que el proveedor y el producto de un ticket existan antes de guardarlo.
+
 Este mismo patrón exacto se utiliza para el sistema de seguridad y roles de usuario:
 
 | Clase | Capa | Para qué sirve |
