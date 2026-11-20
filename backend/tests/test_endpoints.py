@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from fastapi.testclient import TestClient
 
 from config.database import get_db
@@ -245,3 +247,36 @@ def test_editar_con_proveedor_o_producto_inexistente_responde_404(session, prove
     r = client.put(f"/tickets/{ticket['id']}", json={**TICKET, "supplier_id": proveedor.id, "product_id": 999999})
     assert r.status_code == 404
     assert "producto" in r.json()["detail"]
+
+
+# --- Fecha del ticket (base real, se deshace con rollback) ---
+
+def test_crear_ticket_con_fecha_vieja_responde_201(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    ticket = crear_ticket_api(proveedor, fecha="2025-03-10")
+    assert ticket["fecha"] == "2025-03-10"
+
+
+def test_crear_ticket_sin_fecha_usa_la_de_hoy(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    assert crear_ticket_api(proveedor)["fecha"] == date.today().isoformat()
+
+
+def test_crear_ticket_con_fecha_futura_responde_400(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    manana = (date.today() + timedelta(days=1)).isoformat()
+    r = client.post("/tickets/", json={**TICKET, "supplier_id": proveedor.id, "fecha": manana})
+    assert r.status_code == 400
+    assert "fecha" in r.json()["detail"]
+
+
+def test_editar_fecha_del_ticket(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    ticket = crear_ticket_api(proveedor)
+    r = client.put(f"/tickets/{ticket['id']}", json={**TICKET, "supplier_id": proveedor.id, "fecha": "2025-03-10"})
+    assert r.status_code == 200
+    assert client.get(f"/tickets/{ticket['id']}").json()["fecha"] == "2025-03-10"

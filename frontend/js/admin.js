@@ -573,6 +573,7 @@ modalCliente.addEventListener("click", (event) => {
 const modalEditar = document.getElementById("modal-editar-ticket");
 const formEditar = document.getElementById("form-editar");
 const editarTitulo = document.getElementById("editar-titulo");
+const editarFecha = document.getElementById("editar-fecha");
 const editarChofer = document.getElementById("editar-chofer");
 const editarPatente = document.getElementById("editar-patente");
 const editarProveedor = document.getElementById("editar-proveedor");
@@ -622,6 +623,8 @@ function abrirModalEditar(ticket) {
     const sinProducto = crearOpcion("", "Sin producto");
     editarProducto.replaceChildren(sinProducto, ...opcionesOrdenadas(productosPorId));
 
+    editarFecha.value = ticket.fecha;
+    editarFecha.max = fechaDeHoy();
     editarChofer.value = ticket.chofer;
     editarPatente.value = ticket.patente ?? "";
     editarProveedor.value = String(ticket.supplier_id);
@@ -648,6 +651,8 @@ function cerrarModalEditar() {
 
 // Mismas reglas que TicketUpdate y TicketService.editar_ticket en el backend
 function validarEdicion(datos, cerrado) {
+    if (datos.fecha === "") return "La fecha es obligatoria";
+    if (datos.fecha > fechaDeHoy()) return "La fecha no puede ser posterior a hoy";
     if (datos.chofer === "") return "El chofer es obligatorio";
     if (!Number.isInteger(datos.peso_tara) || datos.peso_tara <= 0) return "La tara debe ser un entero mayor a 0";
     if (datos.peso_bruto === null) return cerrado ? "El peso bruto es obligatorio en un ticket cerrado" : null;
@@ -663,6 +668,7 @@ formEditar.addEventListener("submit", async (event) => {
 
     const brutoTexto = editarBruto.value.trim();
     const datos = {
+        fecha: editarFecha.value,
         chofer: editarChofer.value.trim(),
         patente: editarPatente.value.trim() || null,
         peso_tara: Number(editarTara.value),
@@ -754,11 +760,23 @@ async function cerrarTicketPorId() {
 
 // ---------- Formulario Nuevo ticket ----------
 
+// La fecha arranca en hoy y no deja elegir días futuros (se puede cambiar para cargar tickets viejos)
+function prepararCampoFecha() {
+    form.fecha.value = fechaDeHoy();
+    form.fecha.max = fechaDeHoy();
+}
+
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const brutoTexto = form.peso_bruto.value.trim();
+    const fecha = form.fecha.value || fechaDeHoy(); // vacío: la de hoy
+    if (fecha > fechaDeHoy()) {
+        mostrarMensaje("La fecha no puede ser posterior a hoy", "error");
+        return;
+    }
     const datos = {
+        fecha, // se manda la fecha local: así no depende de la zona horaria del servidor
         chofer: form.chofer.value.trim(),
         patente: form.patente.value.trim() || null,
         peso_tara: Number(form.peso_tara.value),
@@ -781,6 +799,7 @@ form.addEventListener("submit", async (event) => {
         if (respuesta.ok) {
             mostrarMensaje(`Pesada registrada. ID: ${cuerpo.id}`, "ok");
             form.reset();
+            prepararCampoFecha();
             await cargarTickets();
         } else if (cuerpo && cuerpo.detail) {
             mostrarMensaje(textoDeError(cuerpo.detail), "error");
@@ -859,6 +878,7 @@ botonBackup.addEventListener("click", descargarBackupManual);
 
 async function iniciar() {
     document.getElementById("nombre-usuario").textContent = sesion.username;
+    prepararCampoFecha();
     await Promise.all([cargarProveedores(), cargarProductos()]);
     await cargarTickets();
 }

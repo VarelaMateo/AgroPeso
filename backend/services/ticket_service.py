@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Optional
 
 from repository.product_repository import ProductRepository
@@ -16,6 +17,7 @@ class TicketService:
         self.product_repository = product_repository
 
     def registrar_pesada(self, ticket: Ticket) -> Ticket:
+        self.validar_fecha(ticket.fecha)
         self.validar_proveedor(ticket.supplier_id)
         self.validar_producto(ticket.product_id)
         if (ticket.peso_bruto is None):
@@ -42,8 +44,11 @@ class TicketService:
         return actualizado
 
     def editar_ticket(self, ticket_id: int, chofer: str, patente: Optional[str], peso_tara: int,
-                      peso_bruto: Optional[int], supplier_id: int, product_id: Optional[int]) -> Ticket:
+                      peso_bruto: Optional[int], supplier_id: int, product_id: Optional[int],
+                      fecha: Optional[date] = None) -> Ticket:
         ticket = self.obtener_ticket(ticket_id)
+        if fecha is not None:
+            self.validar_fecha(fecha)
 
         if self.supplier_repository.get_supplier_by_id(supplier_id) is None:
             raise ReferenciaNoEncontradaError(f"No existe el proveedor con id {supplier_id}")
@@ -60,6 +65,8 @@ class TicketService:
             self.validar_pesos(peso_tara, peso_bruto)
             estado = EstadoTicket.CERRADO
 
+        if fecha is not None:  # sin fecha se conserva la que tenía
+            ticket.fecha = fecha
         ticket.chofer = chofer
         ticket.patente = patente
         ticket.peso_tara = peso_tara
@@ -100,6 +107,11 @@ class TicketService:
         # El producto es opcional: solo se valida si viene
         if product_id is not None and self.product_repository.get_product_by_id(product_id) is None:
             raise ReglaNegocioError(f"No existe el producto con id {product_id}")
+
+    def validar_fecha(self, fecha: date) -> None:
+        # Se pueden cargar tickets viejos, pero no con fecha futura
+        if fecha > date.today():
+            raise ReglaNegocioError(f"La fecha ({fecha.strftime('%d/%m/%Y')}) no puede ser posterior a hoy")
 
     def validar_pesos (self, peso_tara: int, peso_bruto: int) -> None:
         if peso_tara >= peso_bruto:
