@@ -95,16 +95,23 @@ function crearCeldaEstado(estado) {
     return td;
 }
 
+function crearBotonAccion(texto, color, alHacerClic) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `w3-button w3-small w3-round-xxlarge ${color}`;
+    btn.style.margin = "2px";
+    btn.textContent = texto;
+    btn.addEventListener("click", alHacerClic);
+    return btn;
+}
+
 function crearCeldaAcciones(ticket) {
     const celda = document.createElement("td");
+    celda.style.whiteSpace = "nowrap";
     if (ticket.estado === "abierto") {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "w3-button w3-small w3-round-xxlarge w3-green";
-        btn.textContent = "Cerrar";
-        btn.addEventListener("click", () => cerrarTicket(ticket.id));
-        celda.appendChild(btn);
+        celda.appendChild(crearBotonAccion("Cerrar", "w3-green", () => cerrarTicket(ticket.id)));
     }
+    celda.appendChild(crearBotonAccion("Editar", "w3-light-grey", () => abrirModalEditar(ticket)));
 
     return celda;
 }
@@ -196,6 +203,7 @@ document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     if (modal.style.display === "block") cerrarModal(null);
     else if (modalCliente.style.display === "block") cerrarModalCliente();
+    else if (modalEditar.style.display === "block") cerrarModalEditar();
 });
 
 
@@ -560,6 +568,146 @@ modalCliente.addEventListener("click", (event) => {
     if (event.target === modalCliente) cerrarModalCliente(); // clic en el fondo oscuro
 });
 
+// Editar ticket (abierto o cerrado)
+
+const modalEditar = document.getElementById("modal-editar-ticket");
+const formEditar = document.getElementById("form-editar");
+const editarTitulo = document.getElementById("editar-titulo");
+const editarChofer = document.getElementById("editar-chofer");
+const editarPatente = document.getElementById("editar-patente");
+const editarProveedor = document.getElementById("editar-proveedor");
+const editarProducto = document.getElementById("editar-producto");
+const editarTara = document.getElementById("editar-tara");
+const editarBruto = document.getElementById("editar-bruto");
+const editarBrutoLabel = document.getElementById("editar-bruto-label");
+const editarAyuda = document.getElementById("editar-ayuda");
+const editarNeto = document.getElementById("editar-neto");
+const editarError = document.getElementById("editar-error");
+const editarGuardar = document.getElementById("editar-guardar");
+
+let ticketEnEdicion = null;
+
+function mostrarErrorEditar(texto) {
+    editarError.textContent = texto;
+    editarError.style.display = "block";
+}
+
+// Opciones a partir de un mapa id -> nombre, ordenadas por nombre
+function opcionesOrdenadas(porId) {
+    return Object.entries(porId)
+        .sort((a, b) => a[1].localeCompare(b[1]))
+        .map(([id, nombre]) => crearOpcion(id, nombre));
+}
+
+// Vista previa del neto: bruto - tara si los dos son números válidos
+function actualizarNetoEditar() {
+    const tara = Number(editarTara.value);
+    const bruto = Number(editarBruto.value);
+    if (editarBruto.value === "" || editarTara.value === "") {
+        editarNeto.textContent = "—";
+        editarNeto.className = "";
+    } else {
+        editarNeto.textContent = `${(bruto - tara).toLocaleString("es-AR")} kg`;
+        editarNeto.className = bruto > tara ? "w3-text-green" : "w3-text-red";
+    }
+}
+
+function abrirModalEditar(ticket) {
+    ticketEnEdicion = ticket;
+    const cerrado = ticket.estado === "cerrado";
+    editarError.style.display = "none";
+    editarTitulo.textContent = `Editar ticket ${ticket.id} (${ticket.estado})`;
+
+    editarProveedor.replaceChildren(...opcionesOrdenadas(proveedoresPorId));
+    const sinProducto = crearOpcion("", "Sin producto");
+    editarProducto.replaceChildren(sinProducto, ...opcionesOrdenadas(productosPorId));
+
+    editarChofer.value = ticket.chofer;
+    editarPatente.value = ticket.patente ?? "";
+    editarProveedor.value = String(ticket.supplier_id);
+    editarProducto.value = ticket.product_id === null ? "" : String(ticket.product_id);
+    editarTara.value = ticket.peso_tara;
+    editarBruto.value = ticket.peso_bruto ?? "";
+
+    // Cerrado: el bruto es obligatorio. Abierto: se puede dejar vacío o cargarlo para cerrarlo
+    editarBruto.required = cerrado;
+    editarBrutoLabel.textContent = cerrado ? "Peso bruto (kg) *" : "Peso bruto (kg)";
+    editarAyuda.textContent = cerrado
+        ? "El peso neto se recalcula al guardar."
+        : "Dejá el peso bruto vacío para que siga abierto, o cargalo para cerrarlo.";
+    actualizarNetoEditar();
+
+    modalEditar.style.display = "block";
+    setTimeout(() => editarChofer.focus(), 50);
+}
+
+function cerrarModalEditar() {
+    modalEditar.style.display = "none";
+    ticketEnEdicion = null;
+}
+
+// Mismas reglas que TicketUpdate y TicketService.editar_ticket en el backend
+function validarEdicion(datos, cerrado) {
+    if (datos.chofer === "") return "El chofer es obligatorio";
+    if (!Number.isInteger(datos.peso_tara) || datos.peso_tara <= 0) return "La tara debe ser un entero mayor a 0";
+    if (datos.peso_bruto === null) return cerrado ? "El peso bruto es obligatorio en un ticket cerrado" : null;
+    if (!Number.isInteger(datos.peso_bruto) || datos.peso_bruto <= 0) return "El peso bruto debe ser un entero mayor a 0";
+    if (datos.peso_bruto <= datos.peso_tara) return "El peso bruto debe ser mayor a la tara";
+    return null;
+}
+
+formEditar.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (ticketEnEdicion === null) return;
+    const id = ticketEnEdicion.id;
+
+    const brutoTexto = editarBruto.value.trim();
+    const datos = {
+        chofer: editarChofer.value.trim(),
+        patente: editarPatente.value.trim() || null,
+        peso_tara: Number(editarTara.value),
+        peso_bruto: brutoTexto === "" ? null : Number(brutoTexto),
+        supplier_id: Number(editarProveedor.value),
+        product_id: editarProducto.value === "" ? null : Number(editarProducto.value),
+    };
+
+    const error = validarEdicion(datos, ticketEnEdicion.estado === "cerrado");
+    if (error) {
+        mostrarErrorEditar(error);
+        return;
+    }
+
+    editarGuardar.disabled = true;
+    try {
+        const respuesta = await fetchConToken(`${API_TICKETS}${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(datos),
+        });
+        if (!respuesta.ok) {
+            // 400 / 404 / 422: el error queda dentro del modal sin perder lo escrito
+            const cuerpo = await respuesta.json().catch(() => ({}));
+            mostrarErrorEditar(cuerpo.detail ? textoDeError(cuerpo.detail) : `Error ${respuesta.status}`);
+            return;
+        }
+        cerrarModalEditar();
+        mostrarMensaje(`Ticket ${id} actualizado`, "ok");
+        await cargarTickets(); // la API es la fuente de verdad
+    } catch (error) {
+        console.error("Error al editar el ticket:", error);
+        mostrarErrorEditar("No se pudo conectar con el servidor.");
+    } finally {
+        editarGuardar.disabled = false;
+    }
+});
+
+editarTara.addEventListener("input", actualizarNetoEditar);
+editarBruto.addEventListener("input", actualizarNetoEditar);
+document.getElementById("editar-cancelar").addEventListener("click", cerrarModalEditar);
+modalEditar.addEventListener("click", (event) => {
+    if (event.target === modalEditar) cerrarModalEditar(); // clic en el fondo oscuro
+});
+
 // Cerrar ticket
 
 async function cerrarTicket(id) {
@@ -648,6 +796,58 @@ form.addEventListener("submit", async (event) => {
     }
 });
 
+// ---------- Copia de seguridad de la base ----------
+
+// Solo se descarga cuando el admin toca el botón (si se descargara solo, lo haría en cada PC
+// donde se abra el panel). El respaldo automático diario lo hace el servidor.
+const API_BACKUP = `${API}/backup/descargar`;
+const botonBackup = document.getElementById("btn-backup");
+let descargandoBackup = false;
+
+// El nombre lo decide el servidor (con su fecha); si no llega el encabezado, se usa la fecha local
+function nombreDelBackup(respuesta) {
+    const encabezado = respuesta.headers.get("Content-Disposition") ?? "";
+    const coincidencia = encabezado.match(/filename="([^"]+)"/);
+    return coincidencia ? coincidencia[1] : `agropeso_backup_${fechaDeHoy()}.sql`;
+}
+
+// Devuelve el nombre del archivo descargado, o null si falló
+async function descargarBackup() {
+    if (descargandoBackup) return null;
+    descargandoBackup = true;
+    botonBackup.disabled = true;
+    try {
+        const respuesta = await fetchConToken(API_BACKUP);
+        if (!respuesta.ok) {
+            const cuerpo = await respuesta.json().catch(() => ({}));
+            mostrarMensaje(`No se pudo generar el backup: ${cuerpo.detail ? textoDeError(cuerpo.detail) : respuesta.status}`, "error");
+            return null;
+        }
+        const nombre = nombreDelBackup(respuesta);
+        const url = URL.createObjectURL(await respuesta.blob());
+        const enlace = document.createElement("a");
+        enlace.href = url;
+        enlace.download = nombre;
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        URL.revokeObjectURL(url);
+        return nombre;
+    } catch (error) {
+        console.error("Error al descargar el backup:", error);
+        mostrarMensaje("No se pudo conectar con el servidor para descargar el backup.", "error");
+        return null;
+    } finally {
+        descargandoBackup = false;
+        botonBackup.disabled = false;
+    }
+}
+
+async function descargarBackupManual() {
+    const nombre = await descargarBackup();
+    if (nombre) mostrarMensaje(`Copia de seguridad descargada: ${nombre}`, "ok");
+}
+
 // ---------- Botones y arranque ----------
 
 document.getElementById("btn-logout").addEventListener("click", cerrarSesion);
@@ -655,6 +855,7 @@ document.getElementById("btn-cerrar").addEventListener("click", cerrarTicketPorI
 document.getElementById("btn-proveedor").addEventListener("click", agregarProveedores);
 document.getElementById("btn-producto").addEventListener("click", agregarProducto);
 document.getElementById("btn-cliente").addEventListener("click", abrirModalCliente);
+botonBackup.addEventListener("click", descargarBackupManual);
 
 async function iniciar() {
     document.getElementById("nombre-usuario").textContent = sesion.username;

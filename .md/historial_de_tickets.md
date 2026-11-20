@@ -753,3 +753,108 @@ Al final: una fila vacía y la fila `TOTALES` con `X cerradas de Y`, la suma de 
 - El ticket no guarda la hora, solo la fecha: la columna *Fecha y Hora* muestra solo la fecha. Para incluir la hora hay que agregar un campo de fecha y hora en `tickets` (y migrar los datos existentes).
 - `N° Ticket` usa el `id`; el campo opcional `numero_ticket` no se carga desde el panel.
 - Con muchos tickets, filtrar en el navegador deja de escalar: conviene mover los filtros a la API (`GET /tickets/?desde=...`) junto con la paginación pendiente.
+
+---
+
+## AGROPESO-026: Edición de tickets abiertos y cerrados (backend + panel admin)
+
+El administrador puede corregir cualquier ticket ya creado (patente, chofer, proveedor, producto, tara y bruto), esté abierto o cerrado. El peso neto siempre lo recalcula el backend.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `backend/schemas/ticket_schema.py` | **Nuevo** `TicketUpdate`: `extra="forbid"`, recorta espacios, mismos límites que `TicketCreate` |
+| `backend/services/ticket_service.py` | **Nuevo** `editar_ticket`: valida ticket, proveedor, producto y pesos, y decide el estado |
+| `backend/routers/ticket_router.py` | **Nuevo** `PUT /tickets/{ticket_id}` (solo admin) |
+| `backend/utils/exceptions.py` | **Nueva** `ReferenciaNoEncontradaError` (proveedor/producto inexistente al editar → `404`) |
+| `backend/repository/ticket_repository.py` | Sin cambios: `update_ticket` ya guardaba todos los campos y el neto calculado |
+| `backend/tests/test_server.py`, `backend/tests/test_endpoints.py` | 15 tests nuevos |
+| `frontend/html/admin.html` | **Nuevo** modal `#modal-editar-ticket` |
+| `frontend/js/admin.js` | Botón **Editar** en cada fila, `abrirModalEditar`, vista previa del neto, `validarEdicion` y envío con `PUT` |
+
+### Cómo funciona
+
+| Situación | Resultado |
+|---|---|
+| Ticket abierto, sin `peso_bruto` | Se corrigen los datos; sigue `abierto` con neto `null` |
+| Ticket abierto, con `peso_bruto` válido | Queda `cerrado` y se calcula el neto |
+| Ticket cerrado, con `peso_bruto` válido | Sigue `cerrado` y el neto se recalcula (`bruto - tara`) |
+| `peso_bruto <= peso_tara` | `400`, no se guarda nada |
+| Ticket cerrado con `peso_bruto: null` | `400` (no se reabre un ticket desde la edición) |
+| Ticket, proveedor o producto inexistente | `404` |
+| Rol `cliente` / sin token | `403` / `401` |
+
+**Panel admin**: cada fila de la tabla (abiertos de hoy y resultados de filtros) tiene **Editar**; los abiertos además mantienen **Cerrar**. El modal se abre con los valores actuales del ticket. En un ticket cerrado el bruto es obligatorio (`*`). El **Peso neto** se recalcula en vivo al cambiar tara o bruto (en rojo si el bruto no supera la tara). Los errores, tanto los de la validación en el navegador como los `400`/`404`/`422` de la API, se muestran dentro del modal sin perder lo escrito. Al guardar, el modal se cierra y la lista se vuelve a pedir a la API.
+
+### Decisiones técnicas
+
+- **`PUT` y no `PATCH`**: el modal siempre manda el ticket completo, así no hay ambigüedad entre "no lo mandé" y "lo quiero vacío" (por ejemplo, quitar la patente o el producto).
+- **`404` para proveedor/producto inexistente al editar** (como pide el ticket), mientras que al crear sigue siendo `400`. Por eso existe `ReferenciaNoEncontradaError`, separada de `ReglaNegocioError`.
+- **Se valida todo antes de modificar la entidad**: si algo falla, el ticket queda como estaba.
+- **El neto no se recibe**: lo calcula la entidad `Ticket` (`peso_bruto - peso_tara`) y el repositorio lo guarda.
+- **Sin `innerHTML`**: opciones con `createElement`, errores con `textContent`, botones con `addEventListener`.
+
+### Cómo probarlo
+
+1. Admin: en un ticket abierto, **Editar** → cambiar patente, chofer, proveedor, producto o tara → **Guardar cambios**: la tabla muestra los datos nuevos y sigue abierto.
+2. Admin: en un ticket abierto, cargar un bruto mayor a la tara → queda cerrado con su neto.
+3. Admin: buscar un ticket cerrado → **Editar** → cambiar la tara → la vista previa del neto cambia; al guardar, la tabla muestra el neto recalculado.
+4. Poner un bruto menor o igual a la tara → mensaje en rojo dentro del modal; no se guarda.
+5. `PUT /tickets/{id}` con token de cliente → `403`.
+
+### Pendientes conocidos
+
+- No hay registro de auditoría: no queda guardado quién editó un ticket ni qué valores tenía antes.
+- No se puede editar `fecha`, `transporte` ni `numero_ticket` (no estaban en el alcance del ticket).
+
+---
+
+## AGROPESO-027: Copia de seguridad total de la base y respaldo automático cada 24 hs
+
+El administrador puede descargar un volcado completo de la base (proveedores, productos, usuarios y tickets) en `agropeso_backup_YYYY-MM-DD.sql`. Además, el servidor guarda un backup por día en disco.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `backend/repository/backup_repository.py` | **Nuevo**: `leer_tabla(tabla)` devuelve todas las filas ordenadas por `id` |
+| `backend/services/backup_service.py` | **Nuevo**: `generar_sql` (metadatos + `INSERT INTO` escapados por SQLAlchemy para MySQL) y `guardar_backup_del_dia` |
+| `backend/routers/backup_router.py` | **Nuevo**: `GET /backup/descargar` (solo admin) |
+| `backend/utils/backup_automatico.py` | **Nuevo**: tarea de fondo que cada hora crea el backup del día si falta |
+| `backend/main.py` | `lifespan` que lanza la tarea, router de backup y `expose_headers=["Content-Disposition"]` en CORS |
+| `backend/tests/test_backup.py` | **Nuevo**: 7 tests |
+| `frontend/html/admin.html` | Botón **Descargar Backup DB** debajo de *Cargar cliente* |
+| `frontend/js/admin.js` | `descargarBackup` y `descargarBackupManual` (descarga con `Blob` + aviso) |
+| `.gitignore` | `backend/backups/` |
+| `.md/documentacion_de_la_api.md`, `.md/guia_de_desarrollo.md` | Endpoint, formato, cómo restaurar y limitaciones |
+
+### Cómo funciona
+
+| Situación | Resultado |
+|---|---|
+| Admin hace clic en **Descargar Backup DB** | Descarga `agropeso_backup_<fecha del servidor>.sql` y muestra "Copia de seguridad descargada: ..." |
+| Admin abre el panel | No descarga nada |
+| La API arranca o pasa una hora | Si no existe `backend/backups/agropeso_backup_<hoy>.sql`, lo genera |
+| Cliente / sin token llama al endpoint | `403` / `401` |
+
+### Decisiones técnicas
+
+- **SQL con `INSERT INTO` en lugar de JSON**: se restaura directo con `mysql`, sin escribir un script de importación. Los metadatos que pedía el ticket (`fecha_generacion` y totales) van como comentarios al principio.
+- **Los valores los escapa SQLAlchemy** (`compile(dialect=mysql, literal_binds=True)`): comillas, barras invertidas, `NULL` y fechas quedan bien sin armar el SQL a mano.
+- **Orden de tablas por claves foráneas** (`suppliers` → `products` → `users` → `tickets`) y `FOREIGN_KEY_CHECKS = 0` durante la carga.
+- **Escritura atómica en disco**: se escribe un `.tmp` y se renombra, así nunca queda un `.sql` cortado que impida generar el del día.
+- **La tarea de fondo corre la consulta en otro hilo** (`asyncio.to_thread`) para no frenar la API, y si falla lo registra en el log y sigue intentando cada hora.
+- **El nombre del archivo lo decide el servidor** (header `Content-Disposition`); si el navegador no puede leerlo, usa la fecha local.
+- **Sin descarga automática en el navegador**: el ticket pedía un temporizador con `localStorage` que descargara solo cada 24 hs, pero como la marca es por navegador, se descargaría en cada PC donde se abra el panel. Se dejó solo el botón; el respaldo automático diario lo hace el servidor.
+
+### Verificación
+
+- 132 tests pasan (7 nuevos).
+- Se restauró el backup de la base local dentro de una transacción (borrar todo → ejecutar el `.sql` → comparar → `ROLLBACK`): mismas cantidades, ids, suma de neto, nombres, usuarios y hashes. La base quedó intacta.
+- En el navegador: el botón descarga el archivo con el nombre del servidor y muestra el aviso; al abrir el panel no se descarga nada.
+
+### Pendientes conocidos
+
+- En Railway, `backend/backups/` se pierde en cada deploy: conviene activar los backups del servicio MySQL de Railway o subir los archivos a un almacenamiento externo.
+- No se borran los backups viejos de `backend/backups/` (uno por día): si crece mucho, agregar una limpieza (por ejemplo, conservar los últimos 30).

@@ -8,9 +8,9 @@ from models.ticket_model import Ticket, EstadoTicket
 from repository.product_repository import ProductRepository
 from repository.supplier_repository import SupplierRepository
 from repository.ticket_repository import TicketRepository
-from schemas.ticket_schema import TicketCreate, TicketResponse, TicketClose
+from schemas.ticket_schema import TicketCreate, TicketResponse, TicketClose, TicketUpdate
 from services.ticket_service import TicketService
-from utils.exceptions import ReglaNegocioError, TicketNoEncontradoError
+from utils.exceptions import ReferenciaNoEncontradaError, ReglaNegocioError, TicketNoEncontradoError
 
 from middleware.security import exigir_admin, get_current_user
 from models.user_model import UsuarioActual
@@ -54,6 +54,18 @@ def cerrar_ticket(ticket_id: int, datos: TicketClose, db: Session=Depends(get_db
     try:
         return service.cerrar_ticket(ticket_id, datos.peso_bruto)
     except TicketNoEncontradoError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ReglaNegocioError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.put("/{ticket_id}", response_model=TicketResponse)
+def editar_ticket(ticket_id: int, datos: TicketUpdate, db: Session = Depends(get_db), user: UsuarioActual = Depends(get_current_user)):
+    exigir_admin(user)
+    service = crear_servicio(db)
+
+    try:
+        return service.editar_ticket(ticket_id, **datos.model_dump())
+    except (TicketNoEncontradoError, ReferenciaNoEncontradaError) as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ReglaNegocioError as e:
         raise HTTPException(status_code=400, detail=str(e))
