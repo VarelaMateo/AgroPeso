@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 from models.ticket_model import EstadoTicket, Ticket
 
@@ -63,6 +63,7 @@ class TicketResponse(TicketBase):
     fecha: date
     estado: EstadoTicket
     peso_neto: Optional[int] = None
+    facturado: bool = False
 
 class TicketUpdate(BaseModel):
     """Lo que el administrador envía para editar un ticket (abierto o cerrado).
@@ -90,3 +91,31 @@ class TicketUpdate(BaseModel):
     supplier_id: int = Field(gt=0)
     product_id: Optional[int] = Field(default=None, gt=0)
     fecha: Optional[date] = None  # None: se conserva la fecha que tenía el ticket
+
+
+class FacturarRangoRequest(BaseModel):
+    """Lo que el administrador envía para marcar como facturadas las pesadas de un proveedor en un rango."""
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"example": {"supplier_id": 1, "fecha_desde": "2026-11-01", "fecha_hasta": "2026-11-20"}},
+    )
+
+    supplier_id: int = Field(gt=0)
+    fecha_desde: date
+    fecha_hasta: date
+    facturado: bool = True  # False: deshace la facturación del rango
+
+    @model_validator(mode="after")
+    def rango_valido(self):
+        if self.fecha_desde > self.fecha_hasta:
+            raise ValueError("fecha_desde no puede ser posterior a fecha_hasta")
+        return self
+
+
+class FacturarRangoResponse(BaseModel):
+    """Resumen de la facturación por lote."""
+    actualizados: int
+    supplier_id: int
+    fecha_desde: date
+    fecha_hasta: date
+    facturado: bool

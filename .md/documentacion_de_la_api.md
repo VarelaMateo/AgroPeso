@@ -8,6 +8,7 @@
 | **POST** | `/tickets/` | Registra una nueva pesada. Si se envía sin `peso_bruto` queda abierto. | `TicketResponse` (201) |
 | **PATCH** | `/tickets/{ticket_id}/cerrar`| Registra la segunda pesada y cierra el ticket. | `TicketResponse` (200) |
 | **PUT** | `/tickets/{ticket_id}` | Edita un ticket abierto o cerrado (solo admin). Recalcula el neto. | `TicketResponse` (200) |
+| **PATCH** | `/tickets/facturar` | Marca (o desmarca, con `"facturado": false`) como facturadas las pesadas cerradas de un proveedor en un rango de fechas (solo admin). | `FacturarRangoResponse` (200) |
 
 ---
 
@@ -27,7 +28,7 @@
 | `numero_ticket` | entero | No | Único en la base de datos |
 | `fecha` | fecha | No | Por defecto, la fecha de hoy (del servidor). No puede ser posterior a hoy (`400`) |
 
-*Nota: `TicketResponse` (lo que sale) incluye los mismos campos, más `id`, `estado` y `peso_neto` (calculado).*
+*Nota: `TicketResponse` (lo que sale) incluye los mismos campos, más `id`, `estado`, `peso_neto` (calculado) y `facturado` (`false` al crear; no se puede enviar al crear ni al editar).*
 
 ### Campos de `TicketUpdate` (JSON de entrada de `PUT /tickets/{id}`)
 
@@ -80,6 +81,7 @@ Todos los endpoints de `/tickets` requieren enviar el token JWT en el encabezado
 | `POST /tickets/` | Permitido | 403 Forbidden | 401 Unauthorized |
 | `PATCH /tickets/{id}/cerrar` | Permitido | 403 Forbidden | 401 Unauthorized |
 | `PUT /tickets/{id}` | Permitido | 403 Forbidden | 401 Unauthorized |
+| `PATCH /tickets/facturar` | Permitido | 403 Forbidden | 401 Unauthorized |
 | `GET /tickets/` | Todos los tickets | Solo los de su `supplier_id` | 401 Unauthorized |
 | `GET /tickets/{id}` | Cualquier ticket | Solo si pertenece a su `supplier_id` (si no, 404) | 401 Unauthorized |
 
@@ -122,6 +124,46 @@ Todos los endpoints de `/tickets` requieren enviar el token JWT en el encabezado
 }
 ```
 *Respuesta (200): `"estado": "cerrado"` y `"peso_neto": 32260` (recalculado).*
+
+---
+
+## Facturación
+
+#### `PATCH /tickets/facturar`
+
+Marca como facturadas (`facturado = true`) las pesadas del proveedor que cumplan **todo**:
+
+* `fecha` entre `fecha_desde` y `fecha_hasta` (las dos incluidas).
+* Estado `cerrado` (un ticket abierto todavía no tiene peso neto, así que no se factura).
+* Todavía sin facturar (repetir la misma llamada devuelve `actualizados: 0`).
+
+**Entrada (`FacturarRangoRequest`, rechaza campos extra):**
+
+| Campo | Tipo | Obligatorio | Regla |
+|---|---|---|---|
+| `supplier_id` | entero | Sí | Mayor a 0. Debe existir (si no, `404`) |
+| `fecha_desde` | fecha | Sí | `YYYY-MM-DD` |
+| `fecha_hasta` | fecha | Sí | `YYYY-MM-DD`. No puede ser anterior a `fecha_desde` (si no, `422`) |
+| `facturado` | booleano | No | Por defecto `true`. Con `false` deshace la facturación del rango (por si se marcó por error) |
+
+```json
+{ "supplier_id": 1, "fecha_desde": "2026-11-01", "fecha_hasta": "2026-11-20" }
+```
+
+**Respuesta (200, `FacturarRangoResponse`):**
+
+```json
+{ "actualizados": 2, "supplier_id": 1, "fecha_desde": "2026-11-01", "fecha_hasta": "2026-11-20", "facturado": true }
+```
+
+| Código | Cuándo |
+|---|---|
+| 200 | Se procesó el rango (puede ser `actualizados: 0`) |
+| 401 / 403 | Sin token / rol `cliente` |
+| 404 | No existe el proveedor |
+| 422 | Fechas invertidas, campos faltantes o extra |
+
+Para deshacer una facturación hecha por error, se manda el mismo rango con `"facturado": false`: las pesadas facturadas de ese rango vuelven a quedar sin facturar.
 
 ---
 

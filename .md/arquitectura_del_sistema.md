@@ -87,6 +87,7 @@ El frontend se separa en vistas por rol; no se ocultan botones en una misma pant
 | `admin.html` + `admin.js` | Operativa de báscula (solo rol `admin`) |
 | `auth.js` | Sesión compartida: token, lectura del payload, `fetchConToken` |
 | `cliente.html` + `cliente.js` | Vista de solo lectura del cliente (rol `cliente`) |
+| `facturas.html` + `facturas.js` | Estado de facturación por proveedor y facturación por lote (solo rol `admin`) |
 | `exportar.js` | Compartido por admin y cliente: filtros combinables (`coincideConFiltros`) y exportación a CSV para Excel |
 
 ```text
