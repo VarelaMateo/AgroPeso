@@ -1,5 +1,6 @@
 import pytest
 from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 
 from models.suppliers import SupplierEntity
 from repository.supplier_repository import SupplierRepository
@@ -92,3 +93,25 @@ def test_repositorio_busca_por_nombre_sin_distinguir_mayusculas(session, proveed
     repo = SupplierRepository(session)
     assert repo.get_supplier_by_name("PROVEEDOR DE PRUEBA").id == proveedor.id
     assert repo.get_supplier_by_name("No existe") is None
+
+
+class SesionQueChocaConUnique:
+    """Simula que otra petición insertó el mismo nombre justo antes del commit."""
+    def __init__(self):
+        self.hizo_rollback = False
+
+    def add(self, objeto):
+        pass
+
+    def commit(self):
+        raise IntegrityError("INSERT", {}, Exception("Duplicate entry"))
+
+    def rollback(self):
+        self.hizo_rollback = True
+
+
+def test_repositorio_traduce_integrity_error_a_duplicado():
+    sesion = SesionQueChocaConUnique()
+    with pytest.raises(ProveedorDuplicadoError):
+        SupplierRepository(sesion).create_supplier(SupplierEntity(name="Berg"))
+    assert sesion.hizo_rollback

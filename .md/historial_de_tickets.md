@@ -488,13 +488,14 @@ La API ya no responde 500 cuando se crea un ticket con un proveedor inexistente,
 | Archivo | Cambio |
 |---|---|
 | `utils/exceptions.py` | Nueva excepción `ProveedorDuplicadoError` |
-| `repository/supplier_repository.py` | Nuevos `get_supplier_by_id` y `get_supplier_by_name` (sin distinguir mayúsculas) |
+| `repository/supplier_repository.py` | Nuevos `get_supplier_by_id` y `get_supplier_by_name` (sin distinguir mayúsculas); `create_supplier` traduce el `IntegrityError` de la restricción única a `ProveedorDuplicadoError` |
 | `services/supplier_service.py` | `crear_proveedor` rechaza nombres repetidos |
 | `routers/supplier_router.py` | Traduce `ProveedorDuplicadoError` a 409 |
 | `services/ticket_service.py` | Recibe también un `SupplierRepository`; nueva regla `validar_proveedor` |
 | `routers/ticket_router.py` | Helper `crear_servicio(db)` que arma el servicio con sus dos repositorios |
 | `models/suppliers.py` | `name` con `unique=True` |
 | `tests/test_server.py`, `tests/test_suppliers.py` | Tests de las nuevas reglas y de las búsquedas del repositorio |
+| `tests/test_endpoints.py` | Tests HTTP de 409 y 400 contra la base real (con rollback) |
 
 ### Cómo funciona
 
@@ -509,7 +510,7 @@ La API ya no responde 500 cuando se crea un ticket con un proveedor inexistente,
 - **Proveedor inexistente → 400 (`ReglaNegocioError`)**: es un dato inválido dentro del ticket, no un recurso faltante en la URL (eso sería 404). Se reutiliza la excepción y el router no cambia.
 - **Duplicado → 409 Conflict**: el formato es válido, pero choca con un dato que ya existe.
 - **Inyección de `SupplierRepository` en `TicketService`**: el servicio de tickets consulta proveedores a través de su repositorio, sin importar SQLAlchemy. En los tests se reemplaza por uno en memoria.
-- **Restricción `UNIQUE` en la base**: es la garantía final si dos administradores crean el mismo proveedor al mismo tiempo. `create_all` no la agrega a tablas existentes; ver la guía de desarrollo.
+- **Restricción `UNIQUE` en la base**: es la garantía final si dos administradores crean el mismo proveedor al mismo tiempo. En ese caso el repositorio atrapa el `IntegrityError`, hace rollback y lanza `ProveedorDuplicadoError`, así la respuesta también es 409. `create_all` no agrega la restricción a tablas existentes; ver la guía de desarrollo.
 - **Frontend sin cambios**: `admin.js` ya muestra el `detail` de la API en el modal de error.
 
 ### Cómo probarlo
@@ -523,4 +524,3 @@ La API ya no responde 500 cuando se crea un ticket con un proveedor inexistente,
 ### Pendientes conocidos
 
 - `numero_ticket` repetido y `product_id` inexistente siguen respondiendo 500 (el segundo se resuelve junto con el CRUD de productos).
-- Si dos peticiones crean el mismo proveedor exactamente a la vez, la segunda choca con la restricción `UNIQUE` y responde 500 en lugar de 409.

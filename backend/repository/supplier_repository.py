@@ -1,9 +1,11 @@
 from typing import Optional
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from models.suppliers import Supplier, SupplierEntity
+from utils.exceptions import ProveedorDuplicadoError
 
 class SupplierRepository:
     def __init__(self, session: Session):
@@ -31,7 +33,12 @@ class SupplierRepository:
     def create_supplier(self, supplier: SupplierEntity) -> SupplierEntity:
         supplier_db = self._to_db(supplier)
         self.session.add(supplier_db)
-        self.session.commit()
+        try:
+            self.session.commit()
+        except IntegrityError:
+            # Otra petición creó el mismo nombre entre la validación del servicio y este insert
+            self.session.rollback()
+            raise ProveedorDuplicadoError(f"Ya existe un proveedor con el nombre '{supplier.name}'")
         self.session.refresh(supplier_db)
 
         return self._to_entity(supplier_db)

@@ -93,5 +93,5 @@ pytest
 ```
 * `test_schemas.py`: Valida los esquemas de Pydantic.
 * `test_server.py`: Valida las reglas de negocio en memoria.
-* `test_endpoints.py`: Verifica los 401 (sin token o token inválido) y los 403 (cliente intentando escribir) usando `TestClient`; no necesita base de datos.
+* `test_endpoints.py`: Verifica con `TestClient` los 401 (sin token o token inválido) y los 403 (cliente intentando escribir), sin base de datos. Los tests de 409/400 de proveedores sí usan la base real (con rollback).
 * `test_repository.py`: Prueba contra la base real. Requiere MariaDB encendido; usa fixtures para deshacer los cambios (no deja basura en la BD).

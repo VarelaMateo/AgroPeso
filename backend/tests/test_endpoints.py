@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from config.database import get_db
 from main import app
 from middleware.security import get_current_user
 from models.user_model import Rol, UsuarioActual
@@ -41,3 +42,36 @@ def test_cliente_no_puede_cerrar_ticket():
 def test_cliente_no_puede_crear_proveedor():
     como(UsuarioActual(username="c", rol=Rol.CLIENTE, supplier_id=1))
     assert client.post("/suppliers/", json={"name": "Berg"}).status_code == 403
+
+
+# --- Validaciones de proveedores (base real, se deshace con rollback) ---
+
+ADMIN = UsuarioActual(username="admin_test", rol=Rol.ADMIN)
+
+
+def usar_sesion(session):
+    app.dependency_overrides[get_db] = lambda: session
+
+
+def test_proveedor_duplicado_responde_409(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    r = client.post("/suppliers/", json={"name": "PROVEEDOR DE PRUEBA"})
+    assert r.status_code == 409
+    assert "Ya existe" in r.json()["detail"]
+
+
+def test_ticket_con_proveedor_inexistente_responde_400(session):
+    como(ADMIN)
+    usar_sesion(session)
+    r = client.post("/tickets/", json={**TICKET, "supplier_id": 999999})
+    assert r.status_code == 400
+    assert "proveedor" in r.json()["detail"]
+
+
+def test_ticket_con_proveedor_existente_responde_201(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    r = client.post("/tickets/", json={**TICKET, "supplier_id": proveedor.id})
+    assert r.status_code == 201
+    assert r.json()["estado"] == "abierto"
