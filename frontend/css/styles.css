@@ -288,3 +288,4 @@ body.cliente-oscuro {
   margin-bottom: 12px;
 }
 .tema-oscuro .campo:disabled { opacity: 0.5; cursor: not-allowed; }
+.tema-oscuro .col-tabla thead th { background: var(--tarjeta); } /* encabezado fijo de la lista del admin */

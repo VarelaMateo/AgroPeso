@@ -1110,3 +1110,14 @@ Revisión de toda la aplicación (API, frontend y configuración). Ya estaban bi
 - 166 tests pasan (11 nuevos en `tests/test_seguridad.py`: bloqueo y desbloqueo del login, hash de relleno, cabeceras, CORS, contraseñas y topes).
 - En el navegador: login, panel admin, Facturas, panel cliente y Mis Facturas cargan sin errores de CSP; un `fetch` a otro sitio y un script externo quedan bloqueados.
 
+
+---
+
+## AGROPESO-033: La lista de tickets del admin no estira el formulario
+
+Con muchos tickets, la lista del panel admin hacía crecer toda la fila y el formulario *Nuevo ticket* se estiraba a lo largo de la pantalla.
+
+- La tabla ahora tiene un alto máximo (el de la pantalla) y se desplaza **por dentro**, con el encabezado fijo arriba (`position: sticky`). El formulario y las tarjetas del centro quedan del mismo alto haya 1 o 100 tickets.
+- No se limita la cantidad de tickets mostrados: todos siguen visibles bajando dentro de la lista.
+- Archivos: `frontend/html/admin.html` (CSS de `.col-tabla`) y `frontend/css/styles.css` (fondo del encabezado fijo en modo oscuro).
+- Probado con 40 tickets abiertos: la lista se desplaza, el encabezado queda fijo en claro y oscuro, y el formulario mide lo mismo que con 1 ticket.
