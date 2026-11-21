@@ -5,6 +5,7 @@ from typing import Optional
 from sqlalchemy import insert
 from sqlalchemy.dialects import mysql
 
+from models.factura_model import FacturaDB
 from models.products import Product
 from models.suppliers import Supplier
 from models.ticket_model import TicketDB
@@ -12,7 +13,7 @@ from models.user_model import UserDB
 from repository.backup_repository import BackupRepository
 
 # Orden de las tablas: primero las que no dependen de otras (por las claves foráneas)
-TABLAS = [Supplier.__table__, Product.__table__, UserDB.__table__, TicketDB.__table__]
+TABLAS = [Supplier.__table__, Product.__table__, UserDB.__table__, FacturaDB.__table__, TicketDB.__table__]
 
 
 def nombre_de_backup(dia: date) -> str:
@@ -35,6 +36,7 @@ class BackupService:
             f"-- total_proveedores: {len(datos['suppliers'])}",
             f"-- total_productos: {len(datos['products'])}",
             f"-- total_usuarios: {len(datos['users'])}",
+            f"-- total_facturas: {len(datos['facturas'])}",
             f"-- total_tickets: {len(datos['tickets'])}",
             "-- Restaurar sobre una base vacía con las tablas creadas (python create_table.py):",
             "--   mysql -u root -p AgroPeso < este_archivo.sql",

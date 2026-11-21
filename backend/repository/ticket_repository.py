@@ -1,7 +1,5 @@
 from typing import Optional
-from datetime import date
-
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from models.ticket_model import EstadoTicket, Ticket, TicketDB
 
@@ -46,25 +44,11 @@ class TicketRepository:
         ticket_db.numero_ticket = ticket.numero_ticket
         ticket_db.estado = ticket.estado.value
         ticket_db.facturado = ticket.facturado
+        ticket_db.factura_id = ticket.factura_id
 
         self.session.commit()
         self.session.refresh(ticket_db)
         return self._to_entity(ticket_db)
-
-    def facturar_rango(self, supplier_id: int, desde: date, hasta: date, facturado: bool = True) -> int:
-        """Marca (o desmarca, con facturado=False) los tickets cerrados del proveedor entre esas fechas
-        (ambas incluidas) que todavía no tienen ese valor. Devuelve cuántos se actualizaron."""
-        resultado = self.session.execute(
-            update(TicketDB)
-            .where(TicketDB.supplier_id == supplier_id,
-                   TicketDB.fecha >= desde,
-                   TicketDB.fecha <= hasta,
-                   TicketDB.estado == EstadoTicket.CERRADO.value,
-                   TicketDB.facturado.is_(not facturado))
-            .values(facturado=facturado)
-        )
-        self.session.commit()
-        return resultado.rowcount
 
     def _to_db (self, ticket: Ticket) -> TicketDB:
         return TicketDB(
@@ -80,6 +64,7 @@ class TicketRepository:
             numero_ticket=ticket.numero_ticket,
             estado=ticket.estado.value,
             facturado=ticket.facturado,
+            factura_id=ticket.factura_id,
         )
 
     def _to_entity (self, ticket_db: TicketDB) -> Ticket: #Recibis el ticket desde la bd y lo convertis a la entidad Pura
@@ -96,4 +81,5 @@ class TicketRepository:
             numero_ticket = ticket_db.numero_ticket,
             estado = EstadoTicket(ticket_db.estado),
             facturado = bool(ticket_db.facturado),
+            factura_id = ticket_db.factura_id,
         )

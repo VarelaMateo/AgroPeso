@@ -8,7 +8,6 @@
 | **POST** | `/tickets/` | Registra una nueva pesada. Si se envía sin `peso_bruto` queda abierto. | `TicketResponse` (201) |
 | **PATCH** | `/tickets/{ticket_id}/cerrar`| Registra la segunda pesada y cierra el ticket. | `TicketResponse` (200) |
 | **PUT** | `/tickets/{ticket_id}` | Edita un ticket abierto o cerrado (solo admin). Recalcula el neto. | `TicketResponse` (200) |
-| **PATCH** | `/tickets/facturar` | Marca (o desmarca, con `"facturado": false`) como facturadas las pesadas cerradas de un proveedor en un rango de fechas (solo admin). | `FacturarRangoResponse` (200) |
 
 ---
 
@@ -81,7 +80,6 @@ Todos los endpoints de `/tickets` requieren enviar el token JWT en el encabezado
 | `POST /tickets/` | Permitido | 403 Forbidden | 401 Unauthorized |
 | `PATCH /tickets/{id}/cerrar` | Permitido | 403 Forbidden | 401 Unauthorized |
 | `PUT /tickets/{id}` | Permitido | 403 Forbidden | 401 Unauthorized |
-| `PATCH /tickets/facturar` | Permitido | 403 Forbidden | 401 Unauthorized |
 | `GET /tickets/` | Todos los tickets | Solo los de su `supplier_id` | 401 Unauthorized |
 | `GET /tickets/{id}` | Cualquier ticket | Solo si pertenece a su `supplier_id` (si no, 404) | 401 Unauthorized |
 
@@ -127,43 +125,50 @@ Todos los endpoints de `/tickets` requieren enviar el token JWT en el encabezado
 
 ---
 
-## Facturación
+## Facturas
 
-#### `PATCH /tickets/facturar`
+Una factura agrupa las pesadas **cerradas y sin facturar** de un proveedor dentro de un período. Al crearla, esas pesadas quedan con `facturado = true` y `factura_id` apuntando a ella (en una sola transacción). `TicketResponse` incluye `factura_id`.
 
-Marca como facturadas (`facturado = true`) las pesadas del proveedor que cumplan **todo**:
+#### Endpoints (todos solo admin: `403` para clientes, `401` sin token)
 
-* `fecha` entre `fecha_desde` y `fecha_hasta` (las dos incluidas).
-* Estado `cerrado` (un ticket abierto todavía no tiene peso neto, así que no se factura).
-* Todavía sin facturar (repetir la misma llamada devuelve `actualizados: 0`).
+| Método | Ruta | Descripción | Respuesta |
+|---|---|---|---|
+| **POST** | `/facturas/` | Crea la factura y le asigna las pesadas del período | `FacturaResponse` (201) |
+| **GET** | `/facturas/` | Historial, de la más nueva a la más vieja. Filtro opcional `?supplier_id=` | `list[FacturaResponse]` (200) |
+| **PATCH** | `/facturas/{factura_id}/pago` | Registra el cobro (o la vuelve a pendiente) | `FacturaResponse` (200) |
+| **DELETE** | `/facturas/{factura_id}` | Anula la factura: la borra y sus pesadas vuelven a quedar sin facturar | 204 |
 
-**Entrada (`FacturarRangoRequest`, rechaza campos extra):**
+#### `FacturaCreate` (rechaza campos extra, recorta espacios)
 
 | Campo | Tipo | Obligatorio | Regla |
 |---|---|---|---|
-| `supplier_id` | entero | Sí | Mayor a 0. Debe existir (si no, `404`) |
-| `fecha_desde` | fecha | Sí | `YYYY-MM-DD` |
-| `fecha_hasta` | fecha | Sí | `YYYY-MM-DD`. No puede ser anterior a `fecha_desde` (si no, `422`) |
-| `facturado` | booleano | No | Por defecto `true`. Con `false` deshace la facturación del rango (por si se marcó por error) |
+| `supplier_id` | entero | Sí | Debe existir (si no, `404`) |
+| `numero_factura` | texto | Sí | 1 a 50 caracteres. Único (si se repite, `409`) |
+| `fecha_factura` | fecha | Sí | `YYYY-MM-DD` |
+| `fecha_desde`, `fecha_hasta` | fecha | Sí | Período facturado, ambas incluidas. `fecha_desde` no puede ser posterior (`422`) |
+| `total` | número | Sí | Mayor a 0, se redondea a 2 decimales |
+| `pagado` | booleano | No | Por defecto `false` (pendiente) |
+| `metodo_pago` | texto | Si `pagado` | `Efectivo`, `Transferencia`, `Cheque`, `E-Cheq` o `Cuenta Corriente`. Obligatorio si está pagada (`422`); si está pendiente no se guarda |
+
+Si en el período no hay pesadas cerradas sin facturar del proveedor, responde `400` y no se guarda nada.
 
 ```json
-{ "supplier_id": 1, "fecha_desde": "2026-11-01", "fecha_hasta": "2026-11-20" }
+{ "supplier_id": 1, "numero_factura": "0001-00000142", "fecha_factura": "2026-11-20",
+  "fecha_desde": "2026-11-01", "fecha_hasta": "2026-11-20", "total": 1250000.50,
+  "pagado": true, "metodo_pago": "Transferencia" }
 ```
 
-**Respuesta (200, `FacturarRangoResponse`):**
+#### `FacturaPagoUpdate` (rechaza campos extra)
 
 ```json
-{ "actualizados": 2, "supplier_id": 1, "fecha_desde": "2026-11-01", "fecha_hasta": "2026-11-20", "facturado": true }
+{ "pagado": true, "metodo_pago": "Efectivo" }
 ```
 
-| Código | Cuándo |
-|---|---|
-| 200 | Se procesó el rango (puede ser `actualizados: 0`) |
-| 401 / 403 | Sin token / rol `cliente` |
-| 404 | No existe el proveedor |
-| 422 | Fechas invertidas, campos faltantes o extra |
+Misma regla de `metodo_pago`. Factura inexistente: `404`.
 
-Para deshacer una facturación hecha por error, se manda el mismo rango con `"facturado": false`: las pesadas facturadas de ese rango vuelven a quedar sin facturar.
+#### `FacturaResponse`
+
+Todos los campos de la factura más `id` y `cantidad_tickets` (pesadas incluidas).
 
 ---
 
