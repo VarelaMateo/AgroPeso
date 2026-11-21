@@ -520,7 +520,8 @@ function cerrarModalCliente() {
 // Mismas reglas que ClienteCreate en el backend
 function validarCliente(username, password, password2, supplierId) {
     if (username.length < 3 || username.length > 50) return "El usuario debe tener entre 3 y 50 caracteres";
-    if (password.length < 6) return "La contraseña debe tener al menos 6 caracteres";
+    if (password.length < 8) return "La contraseña debe tener al menos 8 caracteres";
+    if (password.trim().toLowerCase() === username.toLowerCase()) return "La contraseña no puede ser igual al usuario";
     if (new TextEncoder().encode(password).length > 72) return "La contraseña puede tener hasta 72 bytes";
     if (password !== password2) return "Las contraseñas no coinciden";
     if (supplierId === "") return "Elegí un proveedor";

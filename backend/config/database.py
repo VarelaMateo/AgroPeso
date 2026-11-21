@@ -21,7 +21,8 @@ DATABASE_URL = URL.create(
 )
 
 #Create your databases
-engine = create_engine(DATABASE_URL, echo=True, pool_pre_ping=True)
+# DB_ECHO=true muestra cada consulta en la consola (solo para depurar: incluye datos como los hashes)
+engine = create_engine(DATABASE_URL, echo=os.getenv("DB_ECHO", "false").lower() == "true", pool_pre_ping=True)
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
