@@ -77,6 +77,27 @@ ALTER TABLE tickets ADD COLUMN facturado BOOLEAN NOT NULL DEFAULT FALSE;
 
 Los tickets que ya existían quedan como *no facturados*.
 
+Desde AGROPESO-031 las facturas tienen su propia tabla y cada ticket guarda a qué factura pertenece. Ejecutar **en la base local y en la de Railway antes de publicar** (después de la columna `facturado`):
+
+```sql
+CREATE TABLE facturas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  numero_factura VARCHAR(50) NOT NULL UNIQUE,
+  supplier_id INT NOT NULL,
+  fecha_factura DATE NOT NULL,
+  fecha_desde DATE NOT NULL,
+  fecha_hasta DATE NOT NULL,
+  total DECIMAL(12,2) NOT NULL,
+  pagado BOOLEAN NOT NULL DEFAULT FALSE,
+  metodo_pago VARCHAR(50) NULL,
+  CONSTRAINT fk_facturas_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+);
+
+ALTER TABLE tickets
+  ADD COLUMN factura_id INT NULL,
+  ADD CONSTRAINT fk_tickets_factura FOREIGN KEY (factura_id) REFERENCES facturas(id);
+```
+
 *A futuro, se implementarán migraciones con Alembic para evitar el uso de `ALTER TABLE` manual.*
 
 ---
