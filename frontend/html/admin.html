@@ -2,6 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://www.w3schools.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://127.0.0.1:8000 https://agropeso-production.up.railway.app; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AgroPeso - Panel del administrador</title>
   <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
@@ -276,7 +278,7 @@
           <input id="cliente-username" class="w3-input w3-border w3-round" maxlength="50" autocomplete="off">
         </p>
         <p>
-          <label for="cliente-password" class="w3-text-grey">Contraseña <small>(mínimo 6 caracteres)</small></label>
+          <label for="cliente-password" class="w3-text-grey">Contraseña <small>(mínimo 8 caracteres)</small></label>
           <input id="cliente-password" type="password" class="w3-input w3-border w3-round" autocomplete="new-password">
         </p>
         <p>

@@ -1071,3 +1071,42 @@ ALTER TABLE tickets
 - 155 tests pasan (11 nuevos de facturas; se quitaron los 11 del endpoint viejo).
 - En el navegador, con un proveedor de prueba (borrado después): factura pendiente con 2 pesadas (la abierta quedó afuera), error inline sin total, pago con E-Cheq, y anulación que devolvió las pesadas a *No facturado*.
 
+---
+
+## AGROPESO-032: Revisión general de seguridad
+
+Revisión de toda la aplicación (API, frontend y configuración). Ya estaban bien: contraseñas con bcrypt, JWT firmado con algoritmo fijo y vencimiento, `exigir_admin` en todas las escrituras, cada cliente ve solo los datos de su proveedor (404 para lo ajeno), validación con `extra="forbid"`, consultas parametrizadas de SQLAlchemy (sin inyección SQL), sin `innerHTML` ni scripts en línea en el frontend, protección contra fórmulas en el CSV, `.env` y backups fuera del repositorio y sin secretos en el historial de git.
+
+### Cambios
+
+| Problema | Riesgo | Arreglo |
+|---|---|---|
+| El login no limitaba los intentos | Adivinar contraseñas probando miles | Después de 5 fallos de un usuario en 15 minutos responde `429` con `Retry-After` (`routers/auth_router.py`) |
+| Con un usuario inexistente el login respondía más rápido | Averiguar qué usuarios existen midiendo el tiempo | Se verifica igual contra un hash de relleno (`services/auth_service.py`) |
+| Contraseñas de cualquier largo en el login | Hacer trabajar a bcrypt con textos enormes | Más de 128 caracteres se rechaza sin hashear |
+| `echo=True` en la base | Cada consulta, con sus datos (hashes incluidos), terminaba en los logs de Railway | Apagado; se prende con `DB_ECHO=true` (`config/database.py`) |
+| `/docs` y `/openapi.json` públicos en producción | Mapa completo de la API para cualquiera | Ocultos en Railway salvo `DOCS_HABILITADOS=true` (`main.py`) |
+| CORS con `allow_credentials=True` y cualquier método o header | Más permisos de los necesarios | Sin credenciales (el token va en `Authorization`), solo los métodos y headers que se usan |
+| Respuestas sin cabeceras de seguridad | La API se podía mostrar en un `iframe` ajeno, el navegador podía guardar datos privados en caché | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store` y, en Railway, `Strict-Transport-Security` |
+| Frontend sin política de contenido | Si alguien lograra inyectar código, podía cargar scripts de afuera o mandar el token a otro sitio | `Content-Security-Policy` en todas las páginas: scripts solo propios y conexiones solo a la API |
+| Contraseñas de clientes desde 6 caracteres, y `crear_admin.py` aceptaba cualquiera | Contraseñas fáciles de adivinar | Mínimo 8 caracteres y distinta del usuario, en la API, el formulario y `crear_admin.py` (que además pide repetirla) |
+| Pesos y número de ticket sin tope | Un número enorme rompía con `500` en la base | Tope de un `INT` de MySQL (`422`) |
+
+### Recomendaciones (fuera del código)
+
+- **Cambiar la contraseña del admin** de producción por una larga, si es corta o se usó en otro lado.
+- Revisar que `SECRET_KEY` en Railway tenga 32 caracteres o más (si no, la API lo avisa en el log). Cambiarla cierra todas las sesiones abiertas.
+- Pasar al plan pago de Railway antes de que venza la prueba y activar los backups del volumen.
+
+### Pendientes conocidos
+
+- El límite de intentos vive en memoria: se reinicia al redesplegar y no se comparte si hubiera varias réplicas.
+- Alguien puede bloquear el login de un usuario 15 minutos equivocándose a propósito 5 veces con su nombre (es el costo de frenar la fuerza bruta por usuario).
+- El token se guarda en `localStorage`: la CSP y la ausencia de `innerHTML` lo protegen, pero no hay forma de cerrar una sesión robada antes de que venza (60 minutos).
+- No hay cambio de contraseña ni baja de usuarios desde la app.
+
+### Verificación
+
+- 166 tests pasan (11 nuevos en `tests/test_seguridad.py`: bloqueo y desbloqueo del login, hash de relleno, cabeceras, CORS, contraseñas y topes).
+- En el navegador: login, panel admin, Facturas, panel cliente y Mis Facturas cargan sin errores de CSP; un `fetch` a otro sitio y un script externo quedan bloqueados.
+
