@@ -980,3 +980,28 @@ Botón flotante abajo a la derecha en `admin.html` (**🌙 Modo oscuro** / **☀
 
 - El botón queda debajo de los modales (`z-index` 2) y la página tiene espacio abajo para que no tape la última fila de la tabla.
 - `facturas.html` sigue siempre en oscuro; `cliente.html` no cambia.
+
+---
+
+## AGROPESO-030: Mis Facturas (cliente) y tema claro / oscuro en el panel del cliente
+
+El cliente tiene una pantalla de solo lectura con el estado de facturación de sus pesadas, y su panel suma el botón flotante de tema claro / oscuro (como el admin), manteniendo el azul característico.
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `frontend/html/cliente_facturas.html`, `frontend/js/cliente_facturas.js` | **Nuevos**: *AgroPeso - Mis Facturas*. Filtros (estado de facturación, desde, hasta, limpiar), contador de pesadas y kilos netos cerrados, y tabla con cartel azul *Facturado* / rojo *No facturado*. Sin acciones |
+| `frontend/html/cliente.html` | Botón **Facturas** (hacia `cliente_facturas.html`), botón flotante de tema y fondo blanco explícito |
+| `frontend/js/tema.js` | La clase oscura se elige con `<body data-clase-oscura="...">` (por defecto `tema-oscuro`); el cliente usa `cliente-oscuro` |
+| `frontend/css/styles.css` | `--verde` pasa a llamarse `--acento` y `boton-verde` a `boton-principal`; **nuevo** `acento-azul` (tema oscuro con azul) y `cliente-oscuro` (panel del cliente en oscuro) |
+| `frontend/html/facturas.html` | `boton-verde` → `boton-principal` (se ve igual) |
+
+### Decisiones técnicas
+
+- **Mis Facturas siempre en oscuro**, como *Facturas* del admin, con acento azul (`tema-oscuro acento-azul`).
+- **`cliente-oscuro` en vez de `tema-oscuro` en `cliente.html`**: el panel del cliente usa `.barra-superior` y `.tarjeta` con otro diseño (barra tipo píldora, tarjetas con degradado azul) y las reglas de `tema-oscuro` los pisaban. `cliente-oscuro` solo oscurece los grises (`--gris-panel`) y bordes, y deja el azul.
+- **La preferencia de tema es una sola por navegador** (`agropeso_tema`): si se elige oscuro en el panel del cliente, el del admin en ese mismo navegador también abre en oscuro.
+- **Fondo blanco explícito en `cliente.html`**: sin él, un navegador configurado en modo oscuro pintaba el fondo negro aun en tema claro.
+- **Sin cambios en la API**: `GET /tickets/` ya devuelve solo los tickets del proveedor del cliente, con `facturado`.
+- La columna *Fecha* muestra solo la fecha: el ticket no guarda la hora.
