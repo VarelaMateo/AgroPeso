@@ -16,18 +16,20 @@ Así, un texto demasiado largo se rechaza en la API con un error claro, y no exp
 
 Optional[...] indica que el valor puede ser None. """
 
+MAX_INT = 2_147_483_647  # tope de una columna INT de MySQL
+
 class TicketBase(BaseModel): 
     """Campos comunes a lo que entra y a lo que sale."""
     model_config = ConfigDict(str_strip_whitespace=True)
 
     chofer: str = Field(min_length=1, max_length=200)
     patente: Optional[str] = Field(default=None, max_length=11)
-    peso_tara: int = Field(gt=0)
-    peso_bruto: Optional[int] = Field(default=None, gt=0)
+    peso_tara: int = Field(gt=0, le=MAX_INT)
+    peso_bruto: Optional[int] = Field(default=None, gt=0, le=MAX_INT)
     supplier_id: int = Field(gt=0)
     product_id: Optional[int] = Field(default=None, gt=0)
     transporte: str = Field(default="Equipo", max_length=50)
-    numero_ticket: Optional[int] = None
+    numero_ticket: Optional[int] = Field(default=None, gt=0, le=MAX_INT)
 
 class TicketCreate(TicketBase):
     """Lo que el cliente envía para registrar una pesada."""
@@ -53,7 +55,7 @@ class TicketClose (BaseModel):
         json_schema_extra = {"example": {"peso_bruto": 48260}}
     )
 
-    peso_bruto: int = Field(gt=0)
+    peso_bruto: int = Field(gt=0, le=MAX_INT)
 
 class TicketResponse(TicketBase):
     """Lo que la API devuelve."""
@@ -87,8 +89,8 @@ class TicketUpdate(BaseModel):
 
     chofer: str = Field(min_length=1, max_length=200)
     patente: Optional[str] = Field(default=None, max_length=11)
-    peso_tara: int = Field(gt=0)
-    peso_bruto: Optional[int] = Field(default=None, gt=0)  # None: el ticket sigue (o queda) abierto
+    peso_tara: int = Field(gt=0, le=MAX_INT)
+    peso_bruto: Optional[int] = Field(default=None, gt=0, le=MAX_INT)  # None: el ticket sigue (o queda) abierto
     supplier_id: int = Field(gt=0)
     product_id: Optional[int] = Field(default=None, gt=0)
     fecha: Optional[date] = None  # None: se conserva la fecha que tenía el ticket

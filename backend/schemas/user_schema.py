@@ -28,7 +28,7 @@ class ClienteCreate(BaseModel):
 
     username: str = Field(min_length=3, max_length=50)
     # La contraseña no se recorta: un espacio al final es parte de la clave
-    password: str = Field(min_length=6)
+    password: str = Field(min_length=8)
     supplier_id: int = Field(gt=0)
 
     @field_validator("username")
@@ -45,6 +45,12 @@ class ClienteCreate(BaseModel):
         if len(v.encode("utf-8")) > 72:
             raise ValueError("La contraseña puede tener hasta 72 bytes (límite de bcrypt)")
         return v
+
+    @model_validator(mode="after")
+    def clave_distinta_del_usuario(self):
+        if self.password.strip().lower() == self.username.lower():
+            raise ValueError("La contraseña no puede ser igual al usuario")
+        return self
 
 
 class UserResponse(BaseModel):

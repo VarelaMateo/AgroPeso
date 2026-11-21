@@ -113,6 +113,15 @@ SECRET_KEY=<clave generada con: python -c "import secrets; print(secrets.token_h
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
+Variables opcionales de seguridad y depuración (AGROPESO-032):
+
+| Variable | Por defecto | Para qué |
+|---|---|---|
+| `DB_ECHO` | `false` | `true` muestra cada consulta SQL en la consola. Solo para depurar: incluye datos como los hashes de las contraseñas |
+| `DOCS_HABILITADOS` | `true` en local, `false` en Railway | Muestra `/docs`, `/redoc` y `/openapi.json`. Railway se detecta solo (variables `RAILWAY_ENVIRONMENT_*`) |
+
+`SECRET_KEY` tiene que tener al menos 32 caracteres; si es más corta, la API lo avisa en el log al arrancar.
+
 ---
 
 ## Tests
