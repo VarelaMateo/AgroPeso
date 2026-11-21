@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgroPeso - Mis Facturas</title>
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<!-- Mismo tema oscuro que facturas.html, con el azul del panel del cliente -->
+<body class="tema-oscuro acento-azul">
+
+  <header class="barra-superior">
+    <div>
+      <h1 class="marca"><span class="marca-nombre">AgroPeso</span> <span class="marca-seccion">- Mis Facturas</span></h1>
+      <div class="subtitulo"><span id="nombre-proveedor">Cargando...</span></div>
+    </div>
+    <div class="botones-barra">
+      <a href="cliente.html" class="boton boton-contorno">Volver al Panel</a>
+      <button id="btn-logout" type="button" class="boton boton-principal">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <main class="contenido">
+
+    <!-- Filtros (solo lectura) -->
+    <section class="tarjeta" aria-label="Filtros">
+      <div class="barra-filtros">
+        <div class="filtro">
+          <label for="filtro-estado">Estado de facturación</label>
+          <select id="filtro-estado" class="campo">
+            <option value="">Todos</option>
+            <option value="si">Facturados</option>
+            <option value="no">No facturados</option>
+          </select>
+        </div>
+        <div class="filtro">
+          <label for="filtro-desde">Desde</label>
+          <input id="filtro-desde" type="date" class="campo">
+        </div>
+        <div class="filtro">
+          <label for="filtro-hasta">Hasta</label>
+          <input id="filtro-hasta" type="date" class="campo">
+        </div>
+        <button id="btn-limpiar" type="button" class="boton boton-gris">Limpiar</button>
+        <span id="contador" class="ayuda" role="status" style="margin: 0 0 8px;"></span>
+      </div>
+    </section>
+
+    <!-- Pesadas con su estado de facturación -->
+    <section class="tarjeta">
+      <h2 class="titulo-tarjeta">Mis pesadas</h2>
+      <p class="ayuda">Estado de facturación de cada pesada.</p>
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>N° Ticket</th><th>Fecha</th><th>Producto</th><th>Patente</th><th>Peso neto (kg)</th><th>Facturación</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-pesadas">
+            <tr><td colspan="6" class="centrado">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/cliente_facturas.js"></script>
+</body>
+</html>
