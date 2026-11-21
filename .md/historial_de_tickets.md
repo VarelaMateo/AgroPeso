@@ -1005,3 +1005,69 @@ El cliente tiene una pantalla de solo lectura con el estado de facturación de s
 - **Fondo blanco explícito en `cliente.html`**: sin él, un navegador configurado en modo oscuro pintaba el fondo negro aun en tema claro.
 - **Sin cambios en la API**: `GET /tickets/` ya devuelve solo los tickets del proveedor del cliente, con `facturado`.
 - La columna *Fecha* muestra solo la fecha: el ticket no guarda la hora.
+
+---
+
+## AGROPESO-031: Facturas completas por proveedor y período
+
+El administrador registra facturas reales (número, fecha, total, estado y método de pago) que agrupan las pesadas cerradas y sin facturar de un proveedor en un período. Reemplaza el marcado por rango de AGROPESO-029.
+
+### Base de datos (local y Railway, antes de publicar)
+
+```sql
+CREATE TABLE facturas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  numero_factura VARCHAR(50) NOT NULL UNIQUE,
+  supplier_id INT NOT NULL,
+  fecha_factura DATE NOT NULL,
+  fecha_desde DATE NOT NULL,
+  fecha_hasta DATE NOT NULL,
+  total DECIMAL(12,2) NOT NULL,
+  pagado BOOLEAN NOT NULL DEFAULT FALSE,
+  metodo_pago VARCHAR(50) NULL,
+  CONSTRAINT fk_facturas_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+);
+
+ALTER TABLE tickets
+  ADD COLUMN factura_id INT NULL,
+  ADD CONSTRAINT fk_tickets_factura FOREIGN KEY (factura_id) REFERENCES facturas(id);
+```
+
+### Archivos
+
+| Archivo | Cambio |
+|---|---|
+| `backend/models/factura_model.py` | **Nuevo**: entidad `Factura` y modelo `FacturaDB` |
+| `backend/repository/factura_repository.py` | **Nuevo**: crear (con sus pesadas, en una transacción), listar con cantidad de pesadas, registrar pago, anular |
+| `backend/services/factura_service.py` | **Nuevo**: proveedor existente (`404`), número único (`409`), sin pesadas para facturar (`400`) |
+| `backend/schemas/factura_schema.py` | **Nuevos** `FacturaCreate`, `FacturaPagoUpdate`, `FacturaResponse` |
+| `backend/routers/factura_router.py` | **Nuevo**: `POST`, `GET`, `PATCH /{id}/pago`, `DELETE /{id}` en `/facturas/` (solo admin) |
+| `backend/models/ticket_model.py`, `repository/ticket_repository.py`, `schemas/ticket_schema.py` | `factura_id` en el ticket |
+| `backend/services/backup_service.py` | El backup incluye la tabla `facturas` (antes que `tickets`, por la clave foránea) |
+| `backend/tests/test_facturas.py` | **Nuevo**: 11 tests |
+| `frontend/html/facturas.html`, `frontend/js/facturas.js` | Generar factura, registrar pago, anular, historial general y por proveedor |
+| `frontend/css/styles.css` | Carteles verde *Pagada* / amarillo *Pendiente*, botones chicos y filas del formulario |
+
+**Se quitó** `PATCH /tickets/facturar` (y sus tests y los botones *Marcar como Facturado* / *Desmarcar facturación*): permitía marcar pesadas como facturadas sin factura y desmarcar pesadas de una factura.
+
+### Cómo funciona
+
+- **Generar Factura**: con proveedor y período elegidos, se habilita si hay al menos una pesada cerrada sin facturar. El modal muestra proveedor, período, cantidad de pesadas y kilos netos, y pide N° de factura, fecha (hoy por defecto), total, estado (*Pendiente* / *Pagada*) y método (solo si está pagada). Los errores de la API (`400`, `404`, `409`, `422`) se ven dentro del modal.
+- **Vista general**: *Estado por proveedor* y *Últimas facturas emitidas* (N° Factura, Fecha, Proveedor, Período, Pesadas, Total, Pago, Método y acciones).
+- **Vista de un proveedor**: sus pesadas con el N° de factura de cada una, y el historial de sus facturas.
+- **Registrar pago** (facturas pendientes): elige el método y la factura pasa a verde *Pagada*.
+- **Anular**: con confirmación, borra la factura y sus pesadas vuelven a *No facturado* (reemplaza al *Desmarcar facturación* de AGROPESO-029).
+
+### Decisiones técnicas
+
+- **Una sola transacción** al crear: se inserta la factura (`flush` para tener el `id`), se asignan las pesadas con un `UPDATE`, y si no había ninguna se hace `rollback` y el servicio responde `400`.
+- **`total` como `Numeric(12, 2)`** en la base y `float` en la API (con `asdecimal=False`), para que el JSON tenga un número y no un texto.
+- **Pendiente no guarda método**: si llega `metodo_pago` con `pagado: false`, se descarta.
+- **`cantidad_tickets` se calcula** con un `COUNT` de las pesadas de cada factura, no es una columna.
+- Las pesadas que se marcaron como facturadas con el endpoint viejo (sin factura) siguen como *Facturado* sin número.
+
+### Verificación
+
+- 155 tests pasan (11 nuevos de facturas; se quitaron los 11 del endpoint viejo).
+- En el navegador, con un proveedor de prueba (borrado después): factura pendiente con 2 pesadas (la abierta quedó afuera), error inline sin total, pago con E-Cheq, y anulación que devolvió las pesadas a *No facturado*.
+

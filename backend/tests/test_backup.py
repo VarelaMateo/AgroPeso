@@ -22,6 +22,7 @@ class RepositorioFalso:
                            "fecha_alta": date(2026, 11, 1)}],
             "products": [],
             "users": [],
+            "facturas": [],
             "tickets": [{"id": 7, "fecha": date(2026, 11, 20), "chofer": "Ivan", "transporte": "Equipo",
                          "patente": None, "supplier_id": 1, "product_id": None, "peso_tara": 15160,
                          "peso_bruto": None, "peso_neto": None, "estado": "abierto", "numero_ticket": None}],

@@ -26,6 +26,7 @@ class Ticket:  # Entidad pura
     estado: EstadoTicket = EstadoTicket.ABIERTO
     id: Optional[int] = None
     facturado: bool = False  # todo ticket nace sin facturar
+    factura_id: Optional[int] = None  # la factura que lo incluye
 
     @property
     def peso_neto(self) -> Optional[int]:
@@ -53,6 +54,7 @@ class TicketDB(Base):  # Tabla de MySQL
     estado = Column(String(10), nullable=False, default="abierto", server_default="abierto")
     numero_ticket = Column(Integer, nullable=True, unique=True)
     facturado = Column(Boolean, nullable=False, default=False, server_default="0")
+    factura_id = Column(Integer, ForeignKey("facturas.id"), nullable=True)
 
     supplier = relationship("Supplier", back_populates="tickets")
     product = relationship("Product", back_populates="tickets")

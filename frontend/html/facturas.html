@@ -27,8 +27,8 @@
 
   <main class="contenido">
 
-    <!-- Búsqueda y facturación por lote -->
-    <section class="tarjeta" aria-label="Búsqueda y facturación">
+    <!-- Selección del proveedor y del período -->
+    <section class="tarjeta" aria-label="Proveedor y período">
       <div class="barra-filtros">
         <div class="filtro filtro-proveedor">
           <label for="buscar-proveedor">Proveedor (escribí para filtrar o elegí uno)</label>
@@ -44,33 +44,27 @@
           <label for="fecha-hasta">Hasta</label>
           <input id="fecha-hasta" type="date" class="campo">
         </div>
-        <button id="btn-facturar" type="button" class="boton boton-azul" disabled
-                title="Elegí un proveedor y un rango de fechas">Marcar como Facturado</button>
-        <button id="btn-desmarcar" type="button" class="boton boton-rojo-contorno" disabled
-                title="Elegí un proveedor y un rango de fechas">Desmarcar facturación</button>
+        <button id="btn-generar" type="button" class="boton boton-principal" disabled
+                title="Elegí un proveedor y un rango de fechas">Generar Factura</button>
         <button id="btn-limpiar" type="button" class="boton boton-gris">Limpiar</button>
       </div>
     </section>
 
     <div id="mensaje" class="aviso" role="status" style="display: none;"></div>
 
-    <!-- Vista 1: resumen por proveedor -->
+    <!-- Vista general: sin proveedor elegido -->
     <section id="vista-resumen" class="tarjeta">
       <h2 class="titulo-tarjeta">Estado por proveedor</h2>
-      <p class="ayuda">Hacé clic en un proveedor para ver sus pesadas. Solo se facturan tickets cerrados.</p>
+      <p class="ayuda">Hacé clic en un proveedor para ver sus pesadas y sus facturas. Solo se facturan pesadas cerradas.</p>
       <div class="tabla-contenedor">
         <table class="tabla">
-          <thead>
-            <tr><th>Proveedor</th><th>Pesadas</th><th>Facturación</th></tr>
-          </thead>
-          <tbody id="tabla-resumen">
-            <tr><td colspan="3" class="centrado">Cargando...</td></tr>
-          </tbody>
+          <thead><tr><th>Proveedor</th><th>Pesadas</th><th>Facturación</th></tr></thead>
+          <tbody id="tabla-resumen"><tr><td colspan="3" class="centrado">Cargando...</td></tr></tbody>
         </table>
       </div>
     </section>
 
-    <!-- Vista 2: detalle de un proveedor -->
+    <!-- Vista de un proveedor -->
     <section id="vista-detalle" class="tarjeta" style="display: none;">
       <h2 class="titulo-tarjeta" id="titulo-detalle"></h2>
       <p id="resumen-detalle" class="ayuda"></p>
@@ -78,27 +72,108 @@
         <table class="tabla">
           <thead>
             <tr>
-              <th>N° Ticket</th><th>Fecha</th><th>Patente</th><th>Producto</th><th>Peso neto</th><th>Facturación</th>
+              <th>N° Ticket</th><th>Fecha</th><th>Patente</th><th>Producto</th><th>Peso neto</th><th>Facturación</th><th>Factura</th>
             </tr>
           </thead>
           <tbody id="tabla-detalle"></tbody>
         </table>
       </div>
     </section>
+
+    <!-- Facturas: todas (vista general) o las del proveedor elegido -->
+    <section class="tarjeta">
+      <h2 class="titulo-tarjeta" id="titulo-facturas">Últimas facturas emitidas</h2>
+      <p class="ayuda">Anular una factura la borra y sus pesadas vuelven a quedar sin facturar.</p>
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>N° Factura</th><th>Fecha</th><th id="col-proveedor">Proveedor</th><th>Período</th><th>Pesadas</th>
+              <th>Total ($)</th><th>Pago</th><th>Método</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-facturas"><tr><td colspan="9" class="centrado">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
-  <!-- Confirmación antes de facturar -->
+  <!-- Nueva factura -->
+  <div id="modal-generar-factura" class="w3-modal">
+    <div class="w3-modal-content w3-animate-top modal-oscuro" style="max-width: 560px;">
+      <header>
+        <h3>Generar factura</h3>
+      </header>
+      <form id="form-factura" class="cuerpo" novalidate>
+        <p id="factura-resumen" class="ayuda" style="margin-top: 0;"></p>
+        <div class="fila-form">
+          <div class="filtro">
+            <label for="factura-numero">N° de Factura</label>
+            <input id="factura-numero" class="campo" maxlength="50" autocomplete="off" placeholder="0001-00000142">
+          </div>
+          <div class="filtro">
+            <label for="factura-fecha">Fecha de Factura</label>
+            <input id="factura-fecha" type="date" class="campo">
+          </div>
+        </div>
+        <div class="fila-form">
+          <div class="filtro">
+            <label for="factura-total">Total ($)</label>
+            <input id="factura-total" type="number" min="0.01" step="0.01" class="campo">
+          </div>
+          <div class="filtro">
+            <label for="factura-estado">Estado de Pago</label>
+            <select id="factura-estado" class="campo">
+              <option value="pendiente">Pendiente</option>
+              <option value="pagada">Pagada</option>
+            </select>
+          </div>
+          <div class="filtro">
+            <label for="factura-metodo">Método de Pago</label>
+            <select id="factura-metodo" class="campo" disabled></select>
+          </div>
+        </div>
+        <p id="factura-error" class="texto-error" role="alert" style="display: none;"></p>
+        <div class="acciones">
+          <button type="button" id="factura-cancelar" class="boton boton-gris">Cancelar</button>
+          <button type="submit" id="factura-guardar" class="boton boton-principal">Generar factura</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Registrar pago -->
+  <div id="modal-pago" class="w3-modal">
+    <div class="w3-modal-content w3-animate-top modal-oscuro" style="max-width: 420px;">
+      <header>
+        <h3 id="pago-titulo">Registrar pago</h3>
+      </header>
+      <div class="cuerpo">
+        <div class="filtro">
+          <label for="pago-metodo">Método de Pago</label>
+          <select id="pago-metodo" class="campo"></select>
+        </div>
+        <p id="pago-error" class="texto-error" role="alert" style="display: none;"></p>
+        <div class="acciones">
+          <button type="button" id="pago-cancelar" class="boton boton-gris">Cancelar</button>
+          <button type="button" id="pago-guardar" class="boton boton-principal">Registrar pago</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmar anulación -->
   <div id="modal-confirmar" class="w3-modal">
     <div class="w3-modal-content w3-animate-top modal-oscuro" style="max-width: 460px;">
       <header>
-        <h3 id="confirmar-titulo">Marcar como facturado</h3>
+        <h3>Anular factura</h3>
       </header>
       <div class="cuerpo">
         <p id="confirmar-texto"></p>
         <p id="confirmar-error" class="texto-error" role="alert" style="display: none;"></p>
         <div class="acciones">
           <button type="button" id="confirmar-cancelar" class="boton boton-gris">Cancelar</button>
-          <button type="button" id="confirmar-aceptar" class="boton boton-azul">Confirmar</button>
+          <button type="button" id="confirmar-aceptar" class="boton boton-rojo-contorno">Anular factura</button>
         </div>
       </div>
     </div>

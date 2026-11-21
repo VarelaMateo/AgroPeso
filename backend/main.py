@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import models
-from routers import ticket_router, supplier_router, product_router, user_router, auth_router, backup_router
+from routers import ticket_router, supplier_router, product_router, user_router, auth_router, backup_router, factura_router
 from utils.backup_automatico import respaldo_diario
 
 load_dotenv()
@@ -40,3 +40,4 @@ app.include_router(product_router.router)
 app.include_router(user_router.router)
 app.include_router(auth_router.router)
 app.include_router(backup_router.router)
+app.include_router(factura_router.router)

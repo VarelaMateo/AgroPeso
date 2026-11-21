@@ -274,3 +274,17 @@ body.cliente-oscuro {
 .cliente-oscuro .w3-hoverable tbody tr:hover { background-color: #252927; }
 .cliente-oscuro .btn-salir { color: inherit; }
 .cliente-oscuro .boton-tema { background: #1d201f; color: #e8ebe9; border-color: #2d3230; }
+
+/* ---------- Facturas (AGROPESO-031) ---------- */
+
+.tema-oscuro .cartel-verde { background: #43a047; color: #fff; }
+.tema-oscuro .cartel-amarillo { background: #f9a825; color: #1d1a10; }
+.tema-oscuro .boton-chico { padding: 4px 12px; font-size: 12px; }
+.tema-oscuro .boton-chico + .boton-chico { margin-left: 6px; }
+.tema-oscuro .fila-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.tema-oscuro .campo:disabled { opacity: 0.5; cursor: not-allowed; }
