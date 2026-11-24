@@ -40,6 +40,10 @@
     .col-form, .col-centro { flex: 1 1 300px; }
     .col-tabla { flex: 2 1 480px; min-width: 0; }
 
+    /* La lista se desplaza por dentro: con muchos tickets no estira el formulario ni las otras columnas */
+    .col-tabla .w3-responsive { max-height: calc(100vh - 190px); overflow: auto; }
+    .col-tabla thead th { position: sticky; top: 0; z-index: 1; background: #fff; } /* encabezado fijo */
+
     /* Columna izquierda: formulario centrado y repartido en toda la altura */
     .tarjeta-brillo {
       flex: 1;
