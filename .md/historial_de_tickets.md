@@ -1121,3 +1121,33 @@ Con muchos tickets, la lista del panel admin hacía crecer toda la fila y el for
 - No se limita la cantidad de tickets mostrados: todos siguen visibles bajando dentro de la lista.
 - Archivos: `frontend/html/admin.html` (CSS de `.col-tabla`) y `frontend/css/styles.css` (fondo del encabezado fijo en modo oscuro).
 - Probado con 40 tickets abiertos: la lista se desplaza, el encabezado queda fijo en claro y oscuro, y el formulario mide lo mismo que con 1 ticket.
+
+
+---
+
+## dev-fix-NewPassword: modificar un cliente desde el formulario de alta
+
+Hasta ahora no había forma de cambiar la contraseña de un cliente desde la app. En vez de agregar un botón nuevo, se usa el mismo formulario **Cargar cliente**:
+
+- Si el usuario cargado **ya existe**, se pregunta *"¿Querés modificarlo con la nueva contraseña y el proveedor X?"*. Con **Sí, modificar** se le reemplazan contraseña y proveedor; con **Cancelar** no cambia nada y el formulario queda como estaba.
+- El **nombre de usuario no se puede cambiar**: un nombre distinto se toma como un cliente nuevo.
+- **API:** `PUT /users/`, solo admin, con el mismo cuerpo y las mismas validaciones que `POST /users/`. Busca el usuario por `username` (sin distinguir mayúsculas). Responde `404` si no existe y `400` si el proveedor no existe o si el usuario no es `cliente` (la contraseña de un admin nunca se cambia por acá).
+- El modal genérico de confirmación ahora se muestra **por encima** de los otros modales (`z-index: 4` en `admin.html`), para poder preguntar desde el formulario de cliente.
+
+### Usuario y proveedor que no coinciden
+
+Para evitar, por ejemplo, crear el usuario `nutrisur` asignado al proveedor *Juan Varela*:
+
+- Al elegir el proveedor, el campo **Usuario se completa solo** con su nombre en minúsculas, sin acentos ni símbolos (*Juan Varela S.A.* → `juan_varela_s_a`). Se puede editar, y si ya escribiste uno a mano no se pisa.
+- Si el usuario **no se parece** al nombre del proveedor (comparando solo letras y números, uno tiene que contener al otro), se pregunta *"¿Querés asignarlo igual a ese proveedor?"* antes de guardar.
+- **Decisión:** es un **aviso, no una regla obligatoria**. Exigir que el usuario sea igual al nombre del proveedor obligaría a escribir nombres largos con espacios y acentos al entrar, impediría tener más de un usuario por proveedor (el usuario es único) y se rompería al renombrar un proveedor. Si igual se asigna mal, se corrige cargando el mismo usuario con el proveedor correcto y confirmando la modificación.
+
+### Pendientes conocidos
+
+- Cambiar el proveedor de un cliente cambia qué tickets ve desde ese momento.
+- Sigue sin haber baja de usuarios ni cambio del nombre de usuario.
+- La documentación de la API dice que la contraseña del alta pide mínimo 6 caracteres; el mínimo real es 8 (viene de antes de esta rama).
+
+### Verificación
+
+- Tests nuevos en `tests/test_users.py` (servicio: cambia la clave, usuario inexistente, no toca admins) y `tests/test_endpoints.py` (el cliente entra con la clave nueva y no con la vieja, `404` si no existe, `403` para un cliente).

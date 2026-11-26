@@ -50,7 +50,7 @@ from models.suppliers import SupplierEntity
 from schemas.user_schema import ClienteCreate
 from services.auth_service import verify_password
 from services.user_service import UserService
-from utils.exceptions import ReglaNegocioError, UsuarioDuplicadoError
+from utils.exceptions import ReglaNegocioError, UsuarioDuplicadoError, UsuarioNoEncontradoError
 
 
 def test_cliente_create_recorta_usuario_pero_no_la_contrasena():
@@ -86,6 +86,9 @@ class UsuariosEnMemoria:
         self.usuarios.append(user)
         return user
 
+    def update_user(self, user):
+        return user  # el servicio ya modificó el mismo objeto de la lista
+
 
 class ProveedoresEnMemoria:
     def get_supplier_by_id(self, supplier_id):
@@ -115,6 +118,24 @@ def test_servicio_rechaza_usuario_duplicado(user_service, nombre):
 def test_servicio_rechaza_proveedor_inexistente(user_service):
     with pytest.raises(ReglaNegocioError, match="proveedor"):
         user_service.crear_cliente("berg", "clave123", 999)
+
+
+def test_servicio_modifica_clave_y_proveedor_de_cliente(user_service):
+    user_service.crear_cliente("berg", "clave123", 1)
+    modificado = user_service.modificar_cliente("BERG", "nuevaclave", 1)
+    assert verify_password("nuevaclave", modificado.password_hash)
+    assert not verify_password("clave123", modificado.password_hash)
+
+
+def test_servicio_no_modifica_usuario_inexistente(user_service):
+    with pytest.raises(UsuarioNoEncontradoError):
+        user_service.modificar_cliente("nadie", "clave123", 1)
+
+
+def test_servicio_no_modifica_admin(user_service):
+    user_service.repository.create_user(User(username="admin", password_hash="h", rol=Rol.ADMIN))
+    with pytest.raises(ReglaNegocioError, match="cliente"):
+        user_service.modificar_cliente("admin", "clave123", 1)
 
 
 class SesionQueChocaConUnique:
