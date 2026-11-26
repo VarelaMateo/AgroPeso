@@ -509,23 +509,46 @@ function abrirModalCliente() {
     clienteProveedor.replaceChildren(...opciones);
 
     modalCliente.style.display = "block";
-    setTimeout(() => clienteUsername.focus(), 50);
+    setTimeout(() => clienteProveedor.focus(), 50);
 }
 
 function cerrarModalCliente() {
     modalCliente.style.display = "none";
     formCliente.reset(); // no dejar la contraseña escrita en el DOM
+    usuarioSugerido = "";
 }
 
 // Mismas reglas que ClienteCreate en el backend
 function validarCliente(username, password, password2, supplierId) {
+    if (supplierId === "") return "Elegí un proveedor";
     if (username.length < 3 || username.length > 50) return "El usuario debe tener entre 3 y 50 caracteres";
     if (password.length < 8) return "La contraseña debe tener al menos 8 caracteres";
     if (password.trim().toLowerCase() === username.toLowerCase()) return "La contraseña no puede ser igual al usuario";
     if (new TextEncoder().encode(password).length > 72) return "La contraseña puede tener hasta 72 bytes";
     if (password !== password2) return "Las contraseñas no coinciden";
-    if (supplierId === "") return "Elegí un proveedor";
     return null;
+}
+
+// "Juan Varela S.A." -> "juan_varela_s_a": minúsculas, sin acentos ni símbolos
+function sugerirUsuario(nombre) {
+    return nombre.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 50);
+}
+
+// Al elegir proveedor se sugiere el usuario, sin pisar lo que el admin haya escrito a mano
+let usuarioSugerido = "";
+clienteProveedor.addEventListener("change", () => {
+    const actual = clienteUsername.value.trim();
+    if (actual !== "" && actual !== usuarioSugerido) return;
+    usuarioSugerido = sugerirUsuario(proveedoresPorId[clienteProveedor.value] ?? "");
+    clienteUsername.value = usuarioSugerido;
+});
+
+// Se parecen si, comparando solo letras y números, uno contiene al otro
+function usuarioCoincideConProveedor(username, nombreProveedor) {
+    const u = sugerirUsuario(username).replace(/_/g, "");
+    const p = sugerirUsuario(nombreProveedor).replace(/_/g, "");
+    return u.includes(p) || p.includes(u);
 }
 
 formCliente.addEventListener("submit", async (event) => {
@@ -540,13 +563,37 @@ formCliente.addEventListener("submit", async (event) => {
         return;
     }
 
+    // Aviso (no bloqueo) para no asignar el usuario de un proveedor a otro por error
+    const nombreProveedor = proveedoresPorId[supplierId] ?? "";
+    if (!usuarioCoincideConProveedor(username, nombreProveedor)) {
+        const seguir = await abrirModal({
+            titulo: "¿Usuario y proveedor correctos?",
+            texto: `El usuario "${username}" no se parece al proveedor "${nombreProveedor}". ¿Querés asignarlo igual a ese proveedor?`,
+            textoAceptar: "Sí, es correcto",
+        });
+        if (seguir === null) return;
+    }
+
     clienteGuardar.disabled = true;
     try {
-        const respuesta = await fetchConToken(API_USUARIOS, {
-            method: "POST",
+        const pedido = (method) => fetchConToken(API_USUARIOS, {
+            method,
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password, supplier_id: Number(supplierId) }),
         });
+        let respuesta = await pedido("POST");
+        let modificado = false;
+        if (respuesta.status === 409) {
+            // El usuario ya existe: ofrecer cambiarle contraseña y proveedor
+            const confirmado = await abrirModal({
+                titulo: "El usuario ya existe",
+                texto: `"${username}" ya está creado. ¿Querés modificarlo con la nueva contraseña y el proveedor ${nombreProveedor}?`,
+                textoAceptar: "Sí, modificar",
+            });
+            if (confirmado === null) return; // eligió que no: el formulario queda como estaba
+            respuesta = await pedido("PUT");
+            modificado = true;
+        }
         if (!respuesta.ok) {
             // El error se muestra dentro del modal para no perder lo que se escribió
             const cuerpo = await respuesta.json().catch(() => ({}));
@@ -555,7 +602,7 @@ formCliente.addEventListener("submit", async (event) => {
         }
         const creado = await respuesta.json();
         cerrarModalCliente();
-        mostrarMensaje(`Cliente "${creado.username}" creado para ${proveedoresPorId[creado.supplier_id] ?? "el proveedor " + creado.supplier_id}`, "ok");
+        mostrarMensaje(`Cliente "${creado.username}" ${modificado ? "modificado" : "creado"} para ${proveedoresPorId[creado.supplier_id] ?? "el proveedor " + creado.supplier_id}`, "ok");
     } catch (error) {
         console.error("Error al crear el cliente:", error);
         mostrarErrorCliente("No se pudo conectar con el servidor.");

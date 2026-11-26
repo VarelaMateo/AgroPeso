@@ -28,6 +28,14 @@ class UserRepository:
 
         return self._to_entity(user_db)
 
+    def update_user(self, user: User) -> User:
+        user_db = self.session.get(UserDB, user.id)
+        user_db.password_hash = user.password_hash
+        user_db.supplier_id = user.supplier_id
+        self.session.commit()
+        self.session.refresh(user_db)
+        return self._to_entity(user_db)
+
     @staticmethod
     def _to_db(user: User) -> UserDB:
         return UserDB(
