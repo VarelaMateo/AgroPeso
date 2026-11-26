@@ -225,12 +225,14 @@ Al crear un ticket, `product_id` es opcional; si se envía y no existe, la API r
 | Método | Ruta | Descripción | Respuesta |
 |---|---|---|---|
 | POST | `/users/` | Da de alta un usuario con rol `cliente` asociado a un proveedor | `UserResponse` (201) |
+| PUT | `/users/` | Cambia la contraseña y el proveedor de un cliente existente (se busca por `username`) | `UserResponse` (200) |
 
 #### Autorización y Permisos en Usuarios
 
 | Endpoint | Admin | Cliente | Sin token |
 |---|---|---|---|
 | `POST /users/` | ✅ | 403 | 401 |
+| `PUT /users/` | ✅ | 403 | 401 |
 
 #### Esquema de entrada `ClienteCreate`
 
@@ -248,6 +250,15 @@ El rol no se envía: el servidor siempre crea un `cliente` (`extra="forbid"`, ma
 | 400 | `supplier_id` inexistente |
 | 409 | Ya existe un usuario con ese nombre |
 | 422 | Formato inválido (usuario corto/largo, contraseña corta o de más de 72 bytes, campos extra) |
+
+**Modificar un cliente (`PUT /users/`):** mismo cuerpo y mismas reglas que el alta. Busca el usuario por `username` (sin distinguir mayúsculas) y le reemplaza contraseña y proveedor; el nombre de usuario no cambia. Solo modifica usuarios con rol `cliente`. En el panel se usa desde el mismo formulario de alta: si el `POST` responde 409, se pregunta al admin si quiere modificar el usuario existente.
+
+| Código | Cuándo ocurre |
+|---|---|
+| 200 | Cliente modificado |
+| 400 | `supplier_id` inexistente, o el usuario no es `cliente` |
+| 404 | No existe un usuario con ese nombre |
+| 422 | Formato inválido (mismas reglas que el alta) |
 
 **Ejemplo (`POST /users/`):**
 ```json

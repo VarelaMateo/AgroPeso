@@ -67,6 +67,7 @@ def test_cliente_no_puede_crear_proveedor():
 def test_cliente_no_puede_crear_usuarios():
     como(UsuarioActual(username="c", rol=Rol.CLIENTE, supplier_id=1))
     assert client.post("/users/", json=CLIENTE).status_code == 403
+    assert client.put("/users/", json=CLIENTE).status_code == 403
 
 
 def test_alta_de_cliente_no_acepta_rol():
@@ -186,6 +187,27 @@ def test_cliente_con_proveedor_inexistente_responde_400(session):
     r = client.post("/users/", json={**CLIENTE, "supplier_id": 999999})
     assert r.status_code == 400
     assert "proveedor" in r.json()["detail"]
+
+
+def test_admin_modifica_clave_de_cliente_existente(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    datos = {**CLIENTE, "supplier_id": proveedor.id}
+    assert client.post("/users/", json=datos).status_code == 201
+    r = client.put("/users/", json={**datos, "password": "otraclave9"})
+    assert r.status_code == 200
+    assert "password_hash" not in r.json()
+
+    vieja = client.post("/auth/login", data={"username": CLIENTE["username"], "password": CLIENTE["password"]})
+    nueva = client.post("/auth/login", data={"username": CLIENTE["username"], "password": "otraclave9"})
+    assert vieja.status_code == 401 and nueva.status_code == 200
+
+
+def test_modificar_cliente_inexistente_responde_404(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    r = client.put("/users/", json={**CLIENTE, "username": "no_existe_test", "supplier_id": proveedor.id})
+    assert r.status_code == 404
 
 
 # --- Edición de tickets (base real, se deshace con rollback) ---
