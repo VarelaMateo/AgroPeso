@@ -42,7 +42,8 @@ class UserRepository:
             username = user.username,
             password_hash = user.password_hash,
             rol = user.rol.value,
-            supplier_id = user.supplier_id
+            supplier_id = user.supplier_id,
+            activo = user.activo
         )
 
     @staticmethod
@@ -52,5 +53,6 @@ class UserRepository:
             username = user_db.username,
             password_hash = user_db.password_hash,
             rol = Rol(user_db.rol),
-            supplier_id = user_db.supplier_id
+            supplier_id = user_db.supplier_id,
+            activo = user_db.activo
         )
