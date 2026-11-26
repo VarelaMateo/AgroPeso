@@ -37,3 +37,16 @@ class UserService:
         cliente.password_hash = get_password_hash(password)
         cliente.supplier_id = supplier_id
         return self.repository.update_user(cliente)
+
+    def desactivar_cliente(self, username: str, supplier_id: int) -> None:
+        """Baja lógica: el cliente deja de poder entrar. No se borra nada de la base."""
+        cliente = self.repository.get_user_by_username(username)
+        if cliente is None:
+            raise UsuarioNoEncontradoError(f"No existe el usuario '{username}'")
+        if cliente.rol != Rol.CLIENTE:
+            raise ReglaNegocioError("Solo se pueden eliminar usuarios con rol 'cliente'")
+        if cliente.supplier_id != supplier_id:
+            raise ReglaNegocioError(f"El usuario '{username}' no pertenece a ese proveedor")
+
+        cliente.activo = False
+        self.repository.update_user(cliente)

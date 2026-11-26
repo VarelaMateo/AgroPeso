@@ -36,3 +36,16 @@ def modificar_cliente(datos: ClienteCreate, db: Session = Depends(get_db), user:
         raise HTTPException(status_code = 404, detail = str(e))
     except ReglaNegocioError as e:
         raise HTTPException(status_code = 400, detail = str(e))
+
+
+@router.delete("/{username}", status_code = 204)
+def desactivar_cliente(username: str, supplier_id: int, db: Session = Depends(get_db), user: UsuarioActual = Depends(get_current_user)):
+    """Baja lógica del cliente. Se pide el proveedor para confirmar que es el usuario correcto."""
+    exigir_admin(user)
+    service = UserService(UserRepository(db), SupplierRepository(db))
+    try:
+        service.desactivar_cliente(username, supplier_id)
+    except UsuarioNoEncontradoError as e:
+        raise HTTPException(status_code = 404, detail = str(e))
+    except ReglaNegocioError as e:
+        raise HTTPException(status_code = 400, detail = str(e))
