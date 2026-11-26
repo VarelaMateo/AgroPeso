@@ -1138,6 +1138,7 @@ Hasta ahora no había forma de cambiar la contraseña de un cliente desde la app
 
 Para evitar, por ejemplo, crear el usuario `nutrisur` asignado al proveedor *Juan Varela*:
 
+- El formulario empieza por el **Proveedor** (Proveedor, Usuario, Contraseña, Repetir contraseña) y al abrirlo el foco queda en ese campo.
 - Al elegir el proveedor, el campo **Usuario se completa solo** con su nombre en minúsculas, sin acentos ni símbolos (*Juan Varela S.A.* → `juan_varela_s_a`). Se puede editar, y si ya escribiste uno a mano no se pisa.
 - Si el usuario **no se parece** al nombre del proveedor (comparando solo letras y números, uno tiene que contener al otro), se pregunta *"¿Querés asignarlo igual a ese proveedor?"* antes de guardar.
 - **Decisión:** es un **aviso, no una regla obligatoria**. Exigir que el usuario sea igual al nombre del proveedor obligaría a escribir nombres largos con espacios y acentos al entrar, impediría tener más de un usuario por proveedor (el usuario es único) y se rompería al renombrar un proveedor. Si igual se asigna mal, se corrige cargando el mismo usuario con el proveedor correcto y confirmando la modificación.
