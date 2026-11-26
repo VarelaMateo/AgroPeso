@@ -46,7 +46,7 @@ def authenticate_user(repo, username: str, password:str) -> Optional[User]:
     if len(password) > LARGO_MAXIMO_CLAVE:
         return None
     user = repo.get_user_by_username(username)
-    if user is None:
+    if user is None or not user.activo:  # un usuario dado de baja entra igual que uno inexistente
         verify_password(password, _HASH_DE_RELLENO)
         return None
     return user if verify_password(password, user.password_hash) else None

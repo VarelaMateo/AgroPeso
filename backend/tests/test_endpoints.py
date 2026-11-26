@@ -226,6 +226,19 @@ def test_admin_desactiva_cliente_y_queda_en_la_base(session, proveedor):
     assert desactivado is not None and desactivado.activo is False
 
 
+def test_cliente_desactivado_no_entra_y_modificar_lo_reactiva(session, proveedor):
+    como(ADMIN)
+    usar_sesion(session)
+    datos = {**CLIENTE, "supplier_id": proveedor.id}
+    credenciales = {"username": CLIENTE["username"], "password": CLIENTE["password"]}
+    assert client.post("/users/", json=datos).status_code == 201
+    assert client.delete(f"/users/{CLIENTE['username']}?supplier_id={proveedor.id}").status_code == 204
+
+    assert client.post("/auth/login", data=credenciales).status_code == 401
+    assert client.put("/users/", json=datos).status_code == 200
+    assert client.post("/auth/login", data=credenciales).status_code == 200
+
+
 def test_desactivar_cliente_inexistente_responde_404(session, proveedor):
     como(ADMIN)
     usar_sesion(session)

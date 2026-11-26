@@ -25,7 +25,7 @@ class UserService:
         return self.repository.create_user(cliente)
 
     def modificar_cliente(self, username: str, password: str, supplier_id: int) -> User:
-        """Cambia la contraseña y el proveedor de un cliente que ya existe."""
+        """Cambia la contraseña y el proveedor de un cliente que ya existe. Si estaba dado de baja, lo reactiva."""
         cliente = self.repository.get_user_by_username(username)
         if cliente is None:
             raise UsuarioNoEncontradoError(f"No existe el usuario '{username}'")
@@ -36,6 +36,7 @@ class UserService:
 
         cliente.password_hash = get_password_hash(password)
         cliente.supplier_id = supplier_id
+        cliente.activo = True
         return self.repository.update_user(cliente)
 
     def desactivar_cliente(self, username: str, supplier_id: int) -> None:

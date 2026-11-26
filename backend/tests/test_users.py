@@ -159,6 +159,12 @@ def test_servicio_no_desactiva_admin_ni_inexistente(user_service):
         user_service.desactivar_cliente("nadie", 1)
 
 
+def test_servicio_modificar_reactiva_cliente_desactivado(user_service):
+    user_service.crear_cliente("berg", "clave123", 1)
+    user_service.desactivar_cliente("berg", 1)
+    assert user_service.modificar_cliente("berg", "nuevaclave", 1).activo is True
+
+
 class SesionQueChocaConUnique:
     def __init__(self):
         self.hizo_rollback = False
