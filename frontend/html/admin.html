@@ -276,6 +276,10 @@
       <header class="w3-container w3-green">
         <h3>Cargar cliente</h3>
       </header>
+      <div class="w3-bar w3-light-grey">
+        <button type="button" id="cliente-modo-guardar" class="w3-bar-item w3-button w3-half" aria-pressed="true">Modificar/Agregar</button>
+        <button type="button" id="cliente-modo-eliminar" class="w3-bar-item w3-button w3-half" aria-pressed="false">Eliminar</button>
+      </div>
       <form id="form-cliente" class="w3-container w3-padding-16" novalidate>
         <p>
           <label for="cliente-proveedor" class="w3-text-grey">Proveedor</label>
@@ -285,6 +289,7 @@
           <label for="cliente-username" class="w3-text-grey">Usuario</label>
           <input id="cliente-username" class="w3-input w3-border w3-round" maxlength="50" autocomplete="off">
         </p>
+        <div id="cliente-claves">
         <p>
           <label for="cliente-password" class="w3-text-grey">Contraseña <small>(mínimo 8 caracteres)</small></label>
           <input id="cliente-password" type="password" class="w3-input w3-border w3-round" autocomplete="new-password">
@@ -293,6 +298,7 @@
           <label for="cliente-password2" class="w3-text-grey">Repetir contraseña</label>
           <input id="cliente-password2" type="password" class="w3-input w3-border w3-round" autocomplete="new-password">
         </p>
+        </div>
         <p id="cliente-error" class="w3-text-red w3-small" style="display: none;"></p>
         <div class="w3-right">
           <button type="button" id="cliente-cancelar" class="w3-button w3-round w3-light-grey">Cancelar</button>

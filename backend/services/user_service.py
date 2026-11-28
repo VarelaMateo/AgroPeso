@@ -25,7 +25,7 @@ class UserService:
         return self.repository.create_user(cliente)
 
     def modificar_cliente(self, username: str, password: str, supplier_id: int) -> User:
-        """Cambia la contraseña y el proveedor de un cliente que ya existe."""
+        """Cambia la contraseña y el proveedor de un cliente que ya existe. Si estaba dado de baja, lo reactiva."""
         cliente = self.repository.get_user_by_username(username)
         if cliente is None:
             raise UsuarioNoEncontradoError(f"No existe el usuario '{username}'")
@@ -36,4 +36,18 @@ class UserService:
 
         cliente.password_hash = get_password_hash(password)
         cliente.supplier_id = supplier_id
+        cliente.activo = True
         return self.repository.update_user(cliente)
+
+    def desactivar_cliente(self, username: str, supplier_id: int) -> None:
+        """Baja lógica: el cliente deja de poder entrar. No se borra nada de la base."""
+        cliente = self.repository.get_user_by_username(username)
+        if cliente is None:
+            raise UsuarioNoEncontradoError(f"No existe el usuario '{username}'")
+        if cliente.rol != Rol.CLIENTE:
+            raise ReglaNegocioError("Solo se pueden eliminar usuarios con rol 'cliente'")
+        if cliente.supplier_id != supplier_id:
+            raise ReglaNegocioError(f"El usuario '{username}' no pertenece a ese proveedor")
+
+        cliente.activo = False
+        self.repository.update_user(cliente)

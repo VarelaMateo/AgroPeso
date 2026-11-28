@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from config.database import Base
@@ -19,6 +19,7 @@ class User:
     rol: Rol
     supplier_id: Optional[int] = None
     id: Optional[int] = None
+    activo: bool = True  # baja lógica: False no puede entrar
 
 
 class UserDB(Base):
@@ -29,6 +30,7 @@ class UserDB(Base):
     password_hash = Column(String(255), nullable=False)
     rol = Column(String(10), nullable= False)
     supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable= True)
+    activo = Column(Boolean, nullable=False, default=True, server_default="1")
 
     supplier = relationship("Supplier")
 

@@ -226,6 +226,7 @@ Al crear un ticket, `product_id` es opcional; si se envía y no existe, la API r
 |---|---|---|---|
 | POST | `/users/` | Da de alta un usuario con rol `cliente` asociado a un proveedor | `UserResponse` (201) |
 | PUT | `/users/` | Cambia la contraseña y el proveedor de un cliente existente (se busca por `username`) | `UserResponse` (200) |
+| DELETE | `/users/{username}?supplier_id=` | Baja lógica de un cliente: deja de poder entrar | sin cuerpo (204) |
 
 #### Autorización y Permisos en Usuarios
 
@@ -233,6 +234,7 @@ Al crear un ticket, `product_id` es opcional; si se envía y no existe, la API r
 |---|---|---|---|
 | `POST /users/` | ✅ | 403 | 401 |
 | `PUT /users/` | ✅ | 403 | 401 |
+| `DELETE /users/{username}` | ✅ | 403 | 401 |
 
 #### Esquema de entrada `ClienteCreate`
 
@@ -259,6 +261,17 @@ El rol no se envía: el servidor siempre crea un `cliente` (`extra="forbid"`, ma
 | 400 | `supplier_id` inexistente, o el usuario no es `cliente` |
 | 404 | No existe un usuario con ese nombre |
 | 422 | Formato inválido (mismas reglas que el alta) |
+
+Si el cliente estaba desactivado, `PUT /users/` lo reactiva.
+
+**Eliminar un cliente (`DELETE /users/{username}?supplier_id=`):** baja lógica, pone `activo = false` y no borra nada (ni el usuario ni sus tickets). El `supplier_id` es obligatorio y tiene que ser el del usuario, para no desactivar a otro por error. El login de un usuario desactivado responde `401`, igual que uno inexistente.
+
+| Código | Cuándo ocurre |
+|---|---|
+| 204 | Cliente desactivado |
+| 400 | El usuario no es de ese proveedor, o no es `cliente` |
+| 404 | No existe un usuario con ese nombre |
+| 422 | Falta `supplier_id` |
 
 **Ejemplo (`POST /users/`):**
 ```json
