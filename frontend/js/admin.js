@@ -497,9 +497,62 @@ function mostrarErrorCliente(texto) {
     clienteError.style.display = "block";
 }
 
+// El mismo formulario sirve para Modificar/Agregar o para Eliminar (este no pide contraseña)
+const clienteModoGuardar = document.getElementById("cliente-modo-guardar");
+const clienteModoEliminar = document.getElementById("cliente-modo-eliminar");
+let modoEliminarCliente = false;
+
+function ponerModoCliente(eliminar) {
+    modoEliminarCliente = eliminar;
+    clienteModoGuardar.classList.toggle("w3-green", !eliminar);
+    clienteModoEliminar.classList.toggle("w3-red", eliminar);
+    clienteModoGuardar.setAttribute("aria-pressed", String(!eliminar));
+    clienteModoEliminar.setAttribute("aria-pressed", String(eliminar));
+    document.getElementById("cliente-claves").style.display = eliminar ? "none" : "block";
+    clienteGuardar.textContent = eliminar ? "Eliminar cliente" : "Crear cliente";
+    clienteGuardar.classList.toggle("w3-green", !eliminar);
+    clienteGuardar.classList.toggle("w3-red", eliminar);
+    clientePassword.value = clientePassword2.value = "";
+    clienteError.style.display = "none";
+}
+
+clienteModoGuardar.addEventListener("click", () => ponerModoCliente(false));
+clienteModoEliminar.addEventListener("click", () => ponerModoCliente(true));
+
+async function eliminarCliente(username, supplierId) {
+    if (supplierId === "") return mostrarErrorCliente("Elegí un proveedor");
+    if (username.length < 3) return mostrarErrorCliente("Escribí el usuario a eliminar");
+
+    const nombreProveedor = proveedoresPorId[supplierId] ?? "";
+    const confirmado = await abrirModal({
+        titulo: "Eliminar cliente",
+        texto: `¿Desactivar al usuario "${username}" del proveedor ${nombreProveedor}? No va a poder entrar más. Se puede reactivar cargándolo de nuevo.`,
+        textoAceptar: "Sí, eliminar",
+    });
+    if (confirmado === null) return;
+
+    clienteGuardar.disabled = true;
+    try {
+        const respuesta = await fetchConToken(
+            `${API_USUARIOS}${encodeURIComponent(username)}?supplier_id=${Number(supplierId)}`, { method: "DELETE" });
+        if (!respuesta.ok) {
+            const cuerpo = await respuesta.json().catch(() => ({}));
+            mostrarErrorCliente(cuerpo.detail ? textoDeError(cuerpo.detail) : `Error ${respuesta.status}`);
+            return;
+        }
+        cerrarModalCliente();
+        mostrarMensaje(`Cliente "${username}" eliminado`, "ok");
+    } catch (error) {
+        console.error("Error al eliminar el cliente:", error);
+        mostrarErrorCliente("No se pudo conectar con el servidor.");
+    } finally {
+        clienteGuardar.disabled = false;
+    }
+}
+
 function abrirModalCliente() {
     formCliente.reset();
-    clienteError.style.display = "none";
+    ponerModoCliente(false);
 
     // Mismos proveedores que el formulario de tickets, ya cargados en proveedoresPorId
     const proveedores = Object.entries(proveedoresPorId).sort((a, b) => a[1].localeCompare(b[1]));
@@ -556,6 +609,7 @@ formCliente.addEventListener("submit", async (event) => {
     const username = clienteUsername.value.trim();
     const password = clientePassword.value; // la contraseña no se recorta
     const supplierId = clienteProveedor.value;
+    if (modoEliminarCliente) return eliminarCliente(username, supplierId);
 
     const error = validarCliente(username, password, clientePassword2.value, supplierId);
     if (error) {

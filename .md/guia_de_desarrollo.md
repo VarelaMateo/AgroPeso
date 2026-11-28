@@ -98,6 +98,14 @@ ALTER TABLE tickets
   ADD CONSTRAINT fk_tickets_factura FOREIGN KEY (factura_id) REFERENCES facturas(id);
 ```
 
+Desde dev-fix-DeleteUser los usuarios se desactivan con una baja lógica (no se borran). Ejecutar **en la base local y en la de Railway antes de publicar** (sin la columna, el login falla con `500`):
+
+```sql
+ALTER TABLE users ADD COLUMN activo BOOLEAN NOT NULL DEFAULT TRUE;
+```
+
+Los usuarios que ya existían quedan activos.
+
 *A futuro, se implementarán migraciones con Alembic para evitar el uso de `ALTER TABLE` manual.*
 
 ---

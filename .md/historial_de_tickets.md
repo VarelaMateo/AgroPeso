@@ -1152,3 +1152,32 @@ Para evitar, por ejemplo, crear el usuario `nutrisur` asignado al proveedor *Jua
 ### Verificación
 
 - Tests nuevos en `tests/test_users.py` (servicio: cambia la clave, usuario inexistente, no toca admins) y `tests/test_endpoints.py` (el cliente entra con la clave nueva y no con la vieja, `404` si no existe, `403` para un cliente).
+
+
+---
+
+## dev-fix-DeleteUser: eliminar un cliente (baja lógica)
+
+Al tocar **Cargar cliente**, arriba del formulario aparecen dos botones:
+
+- **Modificar/Agregar**: lo mismo que antes (alta, o modificación si el usuario ya existe).
+- **Eliminar**: oculta las contraseñas, pide **proveedor y usuario**, confirma y desactiva al cliente.
+
+- **Baja lógica:** columna `activo` en `users` (los existentes quedan activos). No se borra nada y no hay cascada. El `ALTER TABLE` está en la guía de desarrollo y hay que correrlo **en Railway antes de publicar**.
+- **API:** `DELETE /users/{username}?supplier_id=`, solo admin. Responde `400` si el usuario no es de ese proveedor o no es `cliente`, y `404` si no existe.
+- El login de un usuario desactivado responde `401`, igual que uno inexistente.
+- **Reactivar:** como el usuario es único, cargarlo de nuevo con *Modificar/Agregar* (confirmando la modificación) lo vuelve a activar con la contraseña nueva.
+
+### Decisiones
+
+- **Los tickets no se desactivan.** Los tickets son del proveedor, no del usuario: desactivarlos los ocultaría también al admin y en las facturas, y le sacaría los tickets a otros usuarios del mismo proveedor.
+- **No se pide la contraseña del cliente** para eliminarlo: el admin igual podría cambiarla con *Modificar*. Alcanza con elegir el proveedor (tiene que coincidir) y confirmar.
+
+### Pendientes conocidos
+
+- Un cliente que ya tenía la sesión abierta sigue entrando hasta que vence su token (60 minutos por defecto), porque el token no se consulta contra la base en cada pedido.
+- No hay una lista de usuarios desactivados en el panel.
+
+### Verificación
+
+- Tests nuevos en `tests/test_users.py` (desactiva, proveedor que no coincide, admin o inexistente, Modificar reactiva) y `tests/test_endpoints.py` (`204`/`400`/`404`, queda en la base con `activo = false`, el login responde `401` y vuelve a entrar después de Modificar, `403` para un cliente).
